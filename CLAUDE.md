@@ -21,23 +21,94 @@ npx tauri build          # Full production build with frontend embedding → ins
 **Stack:** Tauri v2 + Vue 3 (Composition API, `<script setup>`) + Tailwind CSS + Pinia + xterm.js
 **SSH:** `russh` 0.61 with `ring` crypto backend (pure Rust)
 **Storage:** AES-256-GCM encrypted JSON config, key derived from machine GUID via PBKDF2
+**I18n:** Custom `useI18n` composable; locale files in `src/locales/{en,zh-CN}.js`
+
+### Component Tree
+
+```
+App.vue
+└── AppShell.vue
+    ├── TitleBar.vue              — Window title, settings toggle, debug toggle
+    ├── Sidebar.vue               — Open servers (top) + saved servers (bottom) + ConnectionDialog
+    ├── MainTabBar.vue            — Tab strip: overview / terminal / filemanager
+    ├── [Content Area]
+    │   ├── WelcomeScreen.vue     — Shown when no server connected
+    │   ├── ServerOverview.vue    — CPU/Mem/Disk/Uptime monitoring (useMonitor composable)
+    │   ├── TerminalContainer.vue — xterm.js terminal (useXterm composable)
+    │   └── FileManager.vue       — File browser
+    │       ├── BreadcrumbBar.vue
+    │       ├── FileListView.vue   — Table: Name, Perms, Owner, Group, Size, Modified
+    │       ├── FileIconView.vue   — Grid: icon thumbnails
+    │       └── ContextMenu.vue   — Right-click actions
+    └── StatusBar.vue             — Connection status, progress bars, clock
+```
 
 ### State Management (Pinia stores)
 
-- **`useServerStore`** — Central store. Open servers array, tabs, activeTabId.
-- **`useConnectionStore`** — Saved connection profiles CRUD.
-- **`useSettingsStore`** — App settings. Persists via `invoke('get_config')` / `invoke('save_config')`.
+- **`useServerStore`** (`src/stores/useServerStore.js`) — Central orchestrator. Manages `servers[]` (each has `tabs[]` and `activeTabId`). `openServer(profile)` creates server entry, connects, starts ping timer. Ping runs `echo 1` every N seconds to measure latency.
+- **`useConnectionStore`** (`src/stores/useConnectionStore.js`) — Saved connection profiles CRUD. `profiles[]`, `connecting` Set.
+- **`useSettingsStore`** (`src/stores/useSettingsStore.js`) — App settings (theme, font, language, etc.). Persists via `invoke('get_config')` / `invoke('save_config')`.
+- **`useFileManagerStore`** (`src/stores/useFileManagerStore.js`) — Per-session file browser state: `paths`, `entries`, `loading`, `errors`, `selections`, `clipboards`, navigation history (`navBack`, `navForward`). All state is keyed by `sessionId` to support multiple concurrent file manager tabs.
 
 ### Tauri Commands (Rust)
 
 All in `src-tauri/src/commands/`:
-- `config::*` — get/save config, save/delete connection
-- `connection::*` — connect, disconnect, terminal_write, terminal_resize, exec_command
-- `file::*` — file_list, file_mkdir, file_remove, file_rename, file_copy, file_exists, file_read, file_write, file_download_dir, file_upload_path, file_chmod
 
-### Toolchain
+**Config** (`config.rs`): `get_config`, `save_config`, `save_connection`, `delete_connection`
+**Connection** (`connection.rs`): `connect`, `disconnect`, `terminal_write`, `terminal_resize`, `exec_command`, `clipboard_read`, `clipboard_write`
+**File** (`file.rs`): `file_list`, `file_mkdir`, `file_remove`, `file_rename`, `file_copy`, `file_exists`, `file_read`, `file_write`, `file_download_dir`, `file_upload_path`, `file_chmod`
 
-**Rust:** MSVC toolchain (`stable-x86_64-pc-windows-msvc`). All deps are pure Rust — no C compilation needed. `russh` with `ring` backend.
+### SSH Layer (`src-tauri/src/ssh/`)
+
+- **`session.rs`** — `SshSession::connect()` handles DNS → TCP → auth (password or private key with SHA-512 hash). Opens PTY channel, starts shell, spawns 4 tokio tasks: stdin writer, resize handler, exec handler, terminal read loop. **No host key verification** (`check_server_key` returns `Ok(true)` unconditionally).
+- **`manager.rs`** — `SshManager` holds `HashMap<String, SshSessionHandle>` behind a `Mutex`. Each handle stores mpsc senders for stdin, exec, resize, and the session handle. `exec_command` uses oneshot channels for request/response pattern.
+
+### File Listing Format
+
+`file_list` uses GNU `find -printf` for machine-parseable output:
+```
+type\tsize\ttimestamp\tperms\towner\tgroup\tname
+```
+Fallback to `ls -la` for BSD/macOS. `FileEntry` struct:
+```rust
+{ name, is_dir, size, modified, perms, owner, group }
+```
+
+### File Transfer & Progress Reporting
+
+All file transfers emit `sftp-progress` Tauri events:
+```json
+{
+  "session_id": "...",
+  "operation": "upload|download",
+  "path": "filename",
+  "bytes_transferred": 12345,
+  "total_bytes": 67890
+}
+```
+
+- **Single file download (`file_read`):** Runs `stat -c %s` first to get file size → streams via `cat` with determinate progress (percentage bar)
+- **Single file upload (`file_write`):** Streams 32KB chunks via `cat >` with determinate progress
+- **Directory download (`file_download_dir`):** `tar czf -` streaming with indeterminate progress (bytes-only, pulsing bar). Emits final completion event after loop ends so StatusBar can show success.
+- **Directory upload (`file_upload_path`):** Recursively walks local filesystem, uploads per-file with individual progress events
+
+**StatusBar.vue** listens for `sftp-progress` globally:
+- `total_bytes > 0` → determinate progress bar with percentage + filename
+- `total_bytes == 0` → indeterminate pulsing bar with bytes transferred
+- Completion detected when `bytes_transferred >= total_bytes` or via final completion event
+- Shows localized success message (e.g., "↑ file.txt uploaded" / "↓ file.tar.gz downloaded") for ~5s
+
+**FileManager.vue** also listens for `sftp-progress` to auto-refresh the directory listing after uploads complete.
+
+### Config Encryption Flow
+
+`get_machine_id()` is called from `derive_key()` → called by both `encrypt_config()` and `decrypt_config()`:
+
+- **Startup:** `AppShell.vue` → `settingsStore.load()` + `connectionStore.loadProfiles()` → `get_config` → `decrypt_config()` → `derive_key()` → `get_machine_id()` (cached after first call)
+- **Connection:** `serverStore.openServer()` → `updateLastConnected()` → `saveProfile()` → `save_connection` → `load()` + `save()` → both go through `derive_key()` → cache hit
+- **Settings save:** `settingsStore.save()` → `save_config` → `load()` + `save()` → cache hit
+
+The `OnceLock` cache in `get_machine_id()` means `reg.exe` runs at most once per process lifetime.
 
 ## Windows Console Window Suppression
 
@@ -64,12 +135,6 @@ Any `std::process::Command` on Windows must set `creation_flags(0x08000000)` to 
 ```
 Bypasses `npm.cmd` and `vite.cmd` batch files. On Windows, `.cmd` files require `cmd.exe` (which is console-subsystem), causing a flash. Calling `node.exe` directly avoids the `cmd.exe` intermediaries entirely.
 
-## Config Encryption Flow
+## Toolchain
 
-`get_machine_id()` is called from `derive_key()` → called by both `encrypt_config()` and `decrypt_config()`:
-
-- **Startup:** `AppShell.vue` → `settingsStore.load()` + `connectionStore.loadProfiles()` → `get_config` → `decrypt_config()` → `derive_key()` → `get_machine_id()` (cached after first call)
-- **Connection:** `serverStore.openServer()` → `updateLastConnected()` → `saveProfile()` → `save_connection` → `load()` + `save()` → both go through `derive_key()` → cache hit
-- **Settings save:** `settingsStore.save()` → `save_config` → `load()` + `save()` → cache hit
-
-The `OnceLock` cache in `get_machine_id()` means `reg.exe` runs at most once per process lifetime.
+**Rust:** MSVC toolchain (`stable-x86_64-pc-windows-msvc`). All deps are pure Rust — no C compilation needed. `russh` with `ring` backend.

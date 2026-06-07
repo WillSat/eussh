@@ -8,9 +8,16 @@ const { t } = useI18n()
 const serverStore = useServerStore()
 
 const now = ref(new Date())
-const uploadProgress = ref(null)
+const progress = ref(null)
 const completedMessage = ref(null)
 let clockTimer = null
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B'
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB'
+  return (b / 1073741824).toFixed(2) + ' GB'
+}
 
 const formattedTime = computed(() => {
   return now.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
@@ -57,25 +64,32 @@ function onKeyUp(e) {
   }
 }
 
+let completeTimer = null
+
 onMounted(async () => {
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   const unlisten = await listen('sftp-progress', (e) => {
     const { operation, path, bytes_transferred, total_bytes } = e.payload
+    const name = (path || '').split('/').pop() || path || '?'
+    const arrow = operation === 'upload' ? '↑' : '↓'
+
     if (total_bytes > 0) {
-      const name = (path || '').split('/').pop()
-      const pct = Math.round((bytes_transferred / total_bytes) * 100)
-      uploadProgress.value = {
-        label: `${operation === 'upload' ? '↑' : '↓'} ${name} ${pct}%`,
-        percentage: pct,
-      }
+      const pct = Math.min(Math.round((bytes_transferred / total_bytes) * 100), 100)
+      progress.value = { arrow, name, pct, label: `${arrow} ${name} ${pct}%`, percentage: pct, determinate: true }
       if (bytes_transferred >= total_bytes) {
-        const op = operation === 'upload' ? 'Uploaded' : 'Downloaded'
-        completedMessage.value = `${op} ${name}`
-        setTimeout(() => { uploadProgress.value = null }, 1000)
-        setTimeout(() => { completedMessage.value = null }, 6000)
+        const key = operation === 'upload' ? 'status.uploaded' : 'status.downloaded'
+        completedMessage.value = t(key, { name })
+        if (completeTimer) clearTimeout(completeTimer)
+        completeTimer = setTimeout(() => {
+          progress.value = null
+          completeTimer = setTimeout(() => { completedMessage.value = null }, 5000)
+        }, 1000)
       }
+    } else {
+      // Indeterminate progress (e.g. directory archive download)
+      progress.value = { arrow, name, pct: 0, label: `${arrow} ${name} ${fmtBytes(bytes_transferred)}`, percentage: 0, determinate: false }
     }
   })
   onBeforeUnmount(() => unlisten?.())
@@ -83,6 +97,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearInterval(clockTimer)
+  if (completeTimer) clearTimeout(completeTimer)
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
 })
@@ -92,10 +107,17 @@ onBeforeUnmount(() => {
   <div class="flex items-center justify-between h-7 px-3 select-none
     bg-[var(--color-bg-secondary)] border-t border-[var(--color-border)]
     text-xs text-[var(--color-text-secondary)]">
-    <!-- Upload progress bar -->
-    <div v-if="uploadProgress" class="absolute bottom-7 left-0 right-0 h-1 bg-[var(--color-bg-tertiary)]">
-      <div class="h-full bg-[var(--color-accent)] transition-all duration-300" :style="{ width: uploadProgress.percentage + '%' }" />
+    <!-- Progress bar (above status bar) -->
+    <div v-if="progress" class="absolute bottom-7 left-0 right-0 h-1 bg-[var(--color-bg-tertiary)]">
+      <div
+        :class="[
+          'h-full transition-all duration-300',
+          progress.determinate ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-accent)] animate-pulse',
+        ]"
+        :style="{ width: progress.determinate ? progress.percentage + '%' : '60%' }"
+      />
     </div>
+
     <div class="flex items-center gap-2 min-w-0">
       <span
         :class="[
@@ -106,11 +128,13 @@ onBeforeUnmount(() => {
           'bg-[var(--color-text-tertiary)]',
         ]"
       />
-      <span class="truncate">{{ statusText }}</span>
-      <span v-if="terminalCount > 0" class="text-[var(--color-text-tertiary)] shrink-0">
+      <!-- Progress label replaces status text during transfer -->
+      <span v-if="progress" class="truncate text-[var(--color-accent)]">{{ progress.label }}</span>
+      <span v-else class="truncate">{{ statusText }}</span>
+      <span v-if="!progress && terminalCount > 0" class="text-[var(--color-text-tertiary)] shrink-0">
         {{ t('status.terminals', { count: terminalCount }) }}
       </span>
-      <span v-if="latencyMs !== null" class="text-[var(--color-text-tertiary)] shrink-0">
+      <span v-if="!progress && latencyMs !== null" class="text-[var(--color-text-tertiary)] shrink-0">
         {{ t('status.latency', { ms: latencyMs }) }}
       </span>
     </div>
@@ -119,7 +143,7 @@ onBeforeUnmount(() => {
       <span v-if="displayModifier" class="text-[var(--color-accent)] text-xs font-medium">
         {{ displayModifier }}
       </span>
-      <span v-else-if="!completedMessage" class="text-[var(--color-text-tertiary)] text-xs tabular-nums">
+      <span v-else-if="!completedMessage && !progress" class="text-[var(--color-text-tertiary)] text-xs tabular-nums">
         {{ formattedTime }}
       </span>
     </div>

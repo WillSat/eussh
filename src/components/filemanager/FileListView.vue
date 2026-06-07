@@ -30,6 +30,14 @@ function formatDate(ts) {
   } catch { return '--' }
 }
 
+function formatPerms(p) {
+  if (!p) return '--'
+  // If already in symbolic form like drwxr-xr-x, return as-is
+  if (p.length >= 9 && p.match(/^[d\-l]/)) return p
+  // If octal like 0755 or 755, return as-is
+  return p
+}
+
 function rowClass(name) {
   return isSelected(name)
     ? 'bg-accent-dim hover-bg-accent-dim'
@@ -42,6 +50,9 @@ function rowClass(name) {
     <thead>
       <tr class="border-b border-[var(--color-border)] text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider">
         <th class="text-left py-1.5 px-3 font-medium">{{ t('filemanager.name') }}</th>
+        <th class="text-left py-1.5 px-2 font-medium w-24 hidden lg:table-cell">{{ t('filemanager.perms') }}</th>
+        <th class="text-left py-1.5 px-2 font-medium w-24 hidden md:table-cell">{{ t('filemanager.owner') }}</th>
+        <th class="text-left py-1.5 px-2 font-medium w-20 hidden md:table-cell">{{ t('filemanager.group') }}</th>
         <th class="text-right py-1.5 px-3 font-medium w-24">{{ t('filemanager.size') }}</th>
         <th class="text-right py-1.5 px-3 font-medium w-40">{{ t('filemanager.modified') }}</th>
       </tr>
@@ -56,6 +67,9 @@ function rowClass(name) {
           <span class="text-base shrink-0" :class="f.is_dir ? 'text-[var(--color-accent)]' : ''">{{ f.is_dir ? '&#x1F4C1;' : '&#x1F4C4;' }}</span>
           <span class="truncate" :class="f.name.startsWith('.') ? 'opacity-70' : ''">{{ f.name }}</span>
         </td>
+        <td class="py-1 px-2 text-xs text-[var(--color-text-tertiary)] font-mono hidden lg:table-cell">{{ formatPerms(f.perms) }}</td>
+        <td class="py-1 px-2 text-xs text-[var(--color-text-tertiary)] truncate max-w-0 hidden md:table-cell">{{ f.owner || '--' }}</td>
+        <td class="py-1 px-2 text-xs text-[var(--color-text-tertiary)] truncate max-w-0 hidden md:table-cell">{{ f.group || '--' }}</td>
         <td class="py-1 px-3 text-right text-xs text-[var(--color-text-tertiary)] tabular-nums">{{ f.is_dir ? '--' : formatSize(f.size) }}</td>
         <td class="py-1 px-3 text-right text-xs text-[var(--color-text-tertiary)]">{{ formatDate(f.modified) }}</td>
       </tr>

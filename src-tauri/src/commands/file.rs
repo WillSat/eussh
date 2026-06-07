@@ -10,6 +10,8 @@ pub struct FileEntry {
     pub size: u64,
     pub modified: u64,
     pub perms: String,
+    pub owner: String,
+    pub group: String,
 }
 
 #[tauri::command]
@@ -19,9 +21,9 @@ pub async fn file_list(
     path: String,
 ) -> Result<Vec<FileEntry>, String> {
     // Use find with printf for reliable machine-parseable output
-    // Format: type<TAB>size<TAB>timestamp<TAB>name
+    // Format: type\t\size\t\ts\tperms\towner\tgroup\tname
     let cmd = format!(
-        "find -L {} -mindepth 1 -maxdepth 1 -not -name '.' -not -name '..' -printf '%Y\\t%s\\t%T@\\t%#m\\t%f\\n' 2>/dev/null",
+        "find -L {} -mindepth 1 -maxdepth 1 -not -name '.' -not -name '..' -printf '%Y\\t%s\\t%T@\\t%#m\\t%u\\t%g\\t%f\\n' 2>/dev/null",
         shell_escape(&path)
     );
     let out = match state.ssh_manager.exec_command(&session_id, &cmd).await {
@@ -43,28 +45,32 @@ pub async fn file_list(
         for line in out.lines() {
             let line = line.trim();
             if line.is_empty() { continue; }
-            let parts: Vec<&str> = line.splitn(5, '\t').collect();
-            if parts.len() < 5 { continue; }
+            let parts: Vec<&str> = line.splitn(7, '\t').collect();
+            if parts.len() < 7 { continue; }
             let is_dir = parts[0] == "d";
             let size: u64 = parts[1].parse().unwrap_or(0);
             let ts_str = parts[2].split('.').next().unwrap_or("0");
             let modified: u64 = ts_str.parse().unwrap_or(0);
             let perms = parts[3].to_string();
-            let name = parts[4].to_string();
-            entries.push(FileEntry { name, is_dir, size, modified, perms });
+            let owner = parts[4].to_string();
+            let group = parts[5].to_string();
+            let name = parts[6].to_string();
+            entries.push(FileEntry { name, is_dir, size, modified, perms, owner, group });
         }
     } else {
         // Parse ls -la fallback output
+        // Format: perms links owner group size month day time/year name...
         for line in out.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() < 9 { continue; }
             let is_dir = parts[0].starts_with('d');
             let size: u64 = parts[4].parse().unwrap_or(0);
-            // Parse human date: "Jan" "15" "10:30" or "Jan" "15" "2024"
             let modified = 0u64; // can't reliably parse ls date to timestamp
             let perms = parts[0].to_string();
+            let owner = parts[2].to_string();
+            let group = parts[3].to_string();
             let name = parts[8..].join(" ");
-            entries.push(FileEntry { name, is_dir, size, modified, perms });
+            entries.push(FileEntry { name, is_dir, size, modified, perms, owner, group });
         }
     }
 
@@ -147,6 +153,20 @@ pub async fn file_read(
     session_id: String,
     remote_path: String,
 ) -> Result<Vec<u8>, String> {
+    // Get file size for progress reporting (best-effort)
+    let stat_cmd = format!(
+        "stat -c %s {} 2>/dev/null || echo 0",
+        shell_escape(&remote_path)
+    );
+    let total_bytes: usize = state
+        .ssh_manager
+        .exec_command(&session_id, &stat_cmd)
+        .await
+        .unwrap_or_default()
+        .trim()
+        .parse()
+        .unwrap_or(0);
+
     let shared = state.ssh_manager.get_session(&session_id).await?;
     let sess = shared.lock().await;
     let mut ch: Channel<russh::client::Msg> = sess
@@ -169,7 +189,7 @@ pub async fn file_read(
                     "operation": "download",
                     "path": rp,
                     "bytes_transferred": data.len(),
-                    "total_bytes": 0,
+                    "total_bytes": total_bytes,
                 }));
             }
             Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break,
@@ -271,6 +291,15 @@ pub async fn file_download_dir(
             _ => {}
         }
     }
+    // Emit completion event so StatusBar can show success
+    let total = data.len();
+    let _ = app.emit("sftp-progress", serde_json::json!({
+        "session_id": sid,
+        "operation": "download",
+        "path": rp,
+        "bytes_transferred": total,
+        "total_bytes": total,
+    }));
     Ok(data)
 }
 
