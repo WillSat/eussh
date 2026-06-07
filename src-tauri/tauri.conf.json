@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "identifier": "com.eussh.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node node_modules/vite/bin/vite.js",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },

@@ -11,9 +11,15 @@ const PBKDF2_ITERATIONS: u32 = 100_000;
 const NONCE_SIZE: usize = 12;
 
 fn get_machine_id() -> Result<String, String> {
+    static CACHED_ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    if let Some(id) = CACHED_ID.get() {
+        return Ok(id.clone());
+    }
+
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        use std::os::windows::process::CommandExt;
         let output = Command::new("reg")
             .args([
                 "query",
@@ -21,6 +27,7 @@ fn get_machine_id() -> Result<String, String> {
                 "/v",
                 "MachineGuid",
             ])
+            .creation_flags(0x08000000)
             .output()
             .map_err(|e| format!("Failed to get machine GUID: {}", e))?;
 
@@ -28,7 +35,9 @@ fn get_machine_id() -> Result<String, String> {
         for line in stdout.lines() {
             if line.contains("MachineGuid") {
                 if let Some(guid) = line.split("REG_SZ").nth(1) {
-                    return Ok(guid.trim().to_string());
+                    let id = guid.trim().to_string();
+                    let _ = CACHED_ID.set(id.clone());
+                    return Ok(id);
                 }
             }
         }
@@ -47,7 +56,9 @@ fn get_machine_id() -> Result<String, String> {
         for line in stdout.lines() {
             if line.contains("IOPlatformUUID") {
                 if let Some(uuid) = line.split('"').nth(3) {
-                    return Ok(uuid.to_string());
+                    let id = uuid.to_string();
+                    let _ = CACHED_ID.set(id.clone());
+                    return Ok(id);
                 }
             }
         }
@@ -58,12 +69,16 @@ fn get_machine_id() -> Result<String, String> {
     {
         for path in &["/etc/machine-id", "/var/lib/dbus/machine-id"] {
             if let Ok(id) = std::fs::read_to_string(path) {
-                return Ok(id.trim().to_string());
+                let id = id.trim().to_string();
+                let _ = CACHED_ID.set(id.clone());
+                return Ok(id);
             }
         }
         // Fallback: hostname
         if let Ok(hostname) = std::process::Command::new("hostname").output() {
-            return Ok(String::from_utf8_lossy(&hostname.stdout).trim().to_string());
+            let id = String::from_utf8_lossy(&hostname.stdout).trim().to_string();
+            let _ = CACHED_ID.set(id.clone());
+            return Ok(id);
         }
         Err("Could not determine machine ID".into())
     }
