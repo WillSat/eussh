@@ -1,0 +1,77 @@
+export const COLOR_PRESETS = {
+  'default-dark': {
+    label: 'Default Dark',
+    background: '#1e1e1e',
+    foreground: '#d4d4d4',
+    cursor: '#007AFF',
+    cursorAccent: '#1e1e1e',
+    selectionBackground: '#264f78',
+  },
+  'default-light': {
+    label: 'Default Light',
+    background: '#ffffff',
+    foreground: '#1d1d1f',
+    cursor: '#007AFF',
+    cursorAccent: '#ffffff',
+    selectionBackground: '#007AFF33',
+  },
+  'dracula': {
+    label: 'Dracula',
+    background: '#282a36',
+    foreground: '#f8f8f2',
+    cursor: '#bd93f9',
+    cursorAccent: '#282a36',
+    selectionBackground: '#44475a',
+  },
+  'solarized-dark': {
+    label: 'Solarized Dark',
+    background: '#002b36',
+    foreground: '#839496',
+    cursor: '#268bd2',
+    cursorAccent: '#002b36',
+    selectionBackground: '#073642',
+  },
+  'one-dark': {
+    label: 'One Dark',
+    background: '#282c34',
+    foreground: '#abb2bf',
+    cursor: '#61afef',
+    cursorAccent: '#282c34',
+    selectionBackground: '#3e4451',
+  },
+  'gruvbox-dark': {
+    label: 'Gruvbox Dark',
+    background: '#282828',
+    foreground: '#ebdbb2',
+    cursor: '#d79921',
+    cursorAccent: '#282828',
+    selectionBackground: '#3c3836',
+  },
+}
+
+export function getTerminalTheme(preset) {
+  const base = COLOR_PRESETS[preset] || COLOR_PRESETS['default-dark']
+  return {
+    background: base.background,
+    foreground: base.foreground,
+    cursor: base.cursor,
+    cursorAccent: base.cursorAccent,
+    selectionBackground: base.selectionBackground,
+    black: '#000000',
+    red: '#cd3131',
+    green: '#0dbc79',
+    yellow: '#e5e510',
+    blue: '#2472c8',
+    magenta: '#bc3fbc',
+    cyan: '#11a8cd',
+    white: '#e5e5e5',
+    brightBlack: '#666666',
+    brightRed: '#f14c4c',
+    brightGreen: '#23d18b',
+    brightYellow: '#f5f543',
+    brightBlue: '#3b8eea',
+    brightMagenta: '#d670d6',
+    brightCyan: '#29b8db',
+    brightWhite: '#ffffff',
+  }
+}
