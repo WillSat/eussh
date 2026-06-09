@@ -8,18 +8,18 @@
 
 <table>
 <tr>
-<td><img src=".pic/p1_cn.webp"></td>
-<td><img src=".pic/p2_en.webp"></td>
-<td width="445" rowspan="3" valign="top"><img src=".pic/p6.webp"></td>
+<td width="33%"><img src=".pic/p1_cn.webp"></td>
+<td width="33%"><img src=".pic/p2_en.webp"></td>
+<td width="33%"><img src=".pic/p3_en.webp"></td>
 </tr>
 <tr>
-<td><img src=".pic/p3_en.webp"></td>
-<td><img src=".pic/p4_en.webp"></td>
-</tr>
-<tr>
-<td colspan="2"><img src=".pic/p5_en.webp"></td>
+<td width="33%"><img src=".pic/p4_en.webp"></td>
+<td width="33%"><img src=".pic/p5_en.webp"></td>
+<td></td>
 </tr>
 </table>
+
+<p align="center"><img src=".pic/p6.webp" width="445"></p>
 
 ## ✨ 功能特性
 
