@@ -8,14 +8,16 @@
 
 <table>
 <tr>
-<td width="33%"><img src=".pic/p1_cn.webp"></td>
-<td width="33%"><img src=".pic/p2_en.webp"></td>
-<td width="33%"><img src=".pic/p3_en.webp"></td>
+<td><img src=".pic/p1_cn.webp"></td>
+<td><img src=".pic/p2_en.webp"></td>
+<td width="445" rowspan="3" valign="top"><img src=".pic/p6.webp"></td>
 </tr>
 <tr>
-<td width="33%"><img src=".pic/p4_en.webp"></td>
-<td width="33%"><img src=".pic/p5_en.webp"></td>
-<td width="33%"><img src=".pic/p6.webp"></td>
+<td><img src=".pic/p3_en.webp"></td>
+<td><img src=".pic/p4_en.webp"></td>
+</tr>
+<tr>
+<td colspan="2"><img src=".pic/p5_en.webp"></td>
 </tr>
 </table>
 
