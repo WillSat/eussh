@@ -77,6 +77,45 @@ watch(() => props.visible, (v) => {
                     >{{ t(`settings.${th}`) }}</button>
                   </div>
                 </div>
+                <!-- Title Bar Style -->
+                <div>
+                  <label class="text-xs text-[var(--color-text-secondary)] mb-1.5 block">{{ t('settings.titlebarStyle') }}</label>
+                  <div class="flex rounded-[var(--radius-sm)] bg-[var(--color-bg-secondary)] p-0.5">
+                    <button
+                      @click="settings.setTitlebarStyle('macos')"
+                      :class="['flex-1 py-1 text-xs font-medium rounded transition-colors',
+                        settings.titlebarStyle === 'macos'
+                          ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
+                    >{{ t('settings.titlebarMacos') }}</button>
+                    <button
+                      @click="settings.setTitlebarStyle('win11')"
+                      :class="['flex-1 py-1 text-xs font-medium rounded transition-colors',
+                        settings.titlebarStyle === 'win11'
+                          ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
+                    >{{ t('settings.titlebarWin11') }}</button>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-xs text-[var(--color-text-secondary)] mb-1.5 block">{{ t('settings.statusbarStyle') }}</label>
+                  <div class="flex rounded-[var(--radius-sm)] bg-[var(--color-bg-secondary)] p-0.5">
+                    <button
+                      @click="settings.setStatusbarStyle('default')"
+                      :class="['flex-1 py-1 text-xs font-medium rounded transition-colors',
+                        settings.statusbarStyle === 'default'
+                          ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
+                    >{{ t('settings.statusbarDefault') }}</button>
+                    <button
+                      @click="settings.setStatusbarStyle('accent')"
+                      :class="['flex-1 py-1 text-xs font-medium rounded transition-colors',
+                        settings.statusbarStyle === 'accent'
+                          ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
+                    >{{ t('settings.statusbarAccent') }}</button>
+                  </div>
+                </div>
                 <div>
                   <label class="text-xs text-[var(--color-text-secondary)] mb-1.5 block">{{ t('settings.accentColor') }}</label>
                   <div class="grid grid-cols-4 gap-2">

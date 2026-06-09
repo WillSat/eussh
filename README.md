@@ -2,17 +2,49 @@
 
 <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="Eussh">
 
-**Eussh** 是一个使用 Tauri v2 构建的跨平台 SSH 客户端，界面简洁、性能出色，支持多标签页管理、文件管理和多种认证方式。
+**Eussh** 是一个使用 Tauri v2 构建的跨平台 SSH 客户端，界面简洁、性能出色，支持多标签页管理、文件管理以及多服务器同时连接。
+
+## 📸 截图
+
+### 主界面
+
+<table>
+<tr>
+<td width="50%"><img src=".pic/p1_cn.webp" alt="中文界面"><br><em>中文界面</em></td>
+<td width="50%"><img src=".pic/p2_en.webp" alt="English UI"><br><em>English UI</em></td>
+</tr>
+</table>
+
+### 终端 & 文件管理器
+
+<table>
+<tr>
+<td width="50%"><img src=".pic/p3_en.webp" alt="终端"><br><em>终端 — xterm.js 完整 PTY 交互</em></td>
+<td width="50%"><img src=".pic/p4_en.webp" alt="文件管理器"><br><em>文件管理器 — 上传/下载/拖拽/权限</em></td>
+</tr>
+</table>
+
+### 服务器总览 & 设置
+
+<table>
+<tr>
+<td><img src=".pic/p5_en.webp" alt="服务器总览"><br><em>服务器总览 — CPU / 内存 / 磁盘实时监控</em></td>
+</tr>
+<tr>
+<td align="center"><img src=".pic/p6.webp" alt="设置面板" width="445"><br><em>设置面板 — 主题/配色/标题栏/底栏样式</em></td>
+</tr>
+</table>
 
 ## ✨ 功能特性
 
+- **多服务器** — 同时连接多个服务器，一键切换，各服务器终端完全独立
 - **多标签页** — 一个服务器可同时打开多个终端和文件管理器
 - **服务器总览** — CPU、内存、磁盘使用率实时监控
-- **文件管理器** — 支持列表/图标视图、上传/下载、拖拽上传、权限管理
-- **SSH 连接** — 支持密码和私钥认证（纯 Rust `russh` 实现，无 C 依赖）
-- **主题配色** — 6 种终端配色方案、可自定义强调色、明/暗主题
+- **文件管理器** — 列表/图标视图、上传/下载、拖拽上传、权限管理
+- **SSH 连接** — 密码和私钥认证（纯 Rust `russh` 实现，无 C 依赖）
+- **界面自定义** — 标题栏（macOS / Windows 11 风格）、底栏（默认 / 主题色）、6 种终端配色、8 种强调色
 - **数据安全** — 连接配置使用 AES-256-GCM 加密存储
-- **多语言** — 支持中文和英文界面
+- **多语言** — 中文 / English
 
 ## 📦 安装
 
@@ -30,7 +62,7 @@
 
 - [Node.js](https://nodejs.org/) >= 18
 - [Rust](https://www.rust-lang.org/) stable (MSVC on Windows)
-- 系统 WebView 组件（Windows 10+ 自带、macOS 自带、Linux 需 `libwebkit2gtk-4.1`)
+- 系统 WebView 组件（Windows 10+ 自带、macOS 自带、Linux 需 `libwebkit2gtk-4.1`）
 
 ```bash
 # 克隆仓库
@@ -61,13 +93,14 @@ npx tauri build
 
 ### 连接服务器
 
-点击已保存的服务器即可连接。连接成功后，会自动打开**服务器总览**页面，显示 CPU、内存、磁盘等实时信息。
+点击已保存的服务器即可连接。连接成功后在侧边栏上方显示，同时打开**服务器总览**页面，显示 CPU、内存、磁盘等实时指标。
 
 ### 终端操作
 
 - 点击标签栏的 **+** → **新建终端** 打开新终端
 - 终端支持完整的 PTY 交互（xterm.js）
 - 右键粘贴、复制
+- 多服务器终端完全独立，切换无干扰
 
 ### 文件管理
 
@@ -82,6 +115,8 @@ npx tauri build
 点击标题栏的**设置**按钮，可配置：
 - 语言：中文 / English
 - 主题：浅色 / 系统 / 深色
+- 标题栏样式：macOS 圆点 / Windows 11 方形按钮
+- 底栏样式：默认 / 主题色
 - 终端配色方案（6 种）
 - 自定义强调色（8 种预设）
 - 终端字体、字号、光标样式

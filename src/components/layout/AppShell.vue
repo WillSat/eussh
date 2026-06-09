@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onErrorCaptured, watch } from 'vue'
+import { ref, onMounted, onErrorCaptured, watch, reactive } from 'vue'
 import TitleBar from './TitleBar.vue'
 import Sidebar from './Sidebar.vue'
 import MainTabBar from './MainTabBar.vue'
@@ -34,60 +34,51 @@ const vueError = ref(null)
 
 log.info('setup start')
 
-const server = computed(() => serverStore.activeServer)
-
-const overviewSessionId = computed(() => {
-  const s = server.value
-  if (!s) return null
-  const overview = s.tabs.find(t => t.type === 'overview')
+function getOverviewSessionId(srv) {
+  const overview = srv?.tabs?.find(t => t.type === 'overview')
   return overview?.sessionId || null
-})
+}
 
-// --- Tab slide animation state ---
-const enteringPaneId = ref(null)
-const enterDirection = ref('right')
+// --- Per-server tab slide animation state ---
+// Track which server+tab is currently entering (for animation CSS class)
+const enteringState = reactive({}) // { key: 'serverId::tabId' -> direction: 'right'|'left' }
 
 watch(
-  () => {
-    const s = server.value
-    if (!s) return null
-    return s.id + '::' + s.activeTabId
-  },
-  (newKey, oldKey) => {
-    if (!newKey) { enteringPaneId.value = null; return }
-
-    const [newServerId, newTabId] = newKey.split('::')
-    const oldServerId = oldKey ? oldKey.split('::')[0] : null
-    const oldTabId = oldKey ? oldKey.split('::')[1] : null
-
-    if (newServerId !== oldServerId) {
-      enteringPaneId.value = null
-      return
+  () => serverStore.servers.map(s => ({ id: s.id, tabId: s.activeTabId })),
+  (newStates, oldStates) => {
+    if (!oldStates) return
+    for (const ns of newStates) {
+      const os = oldStates.find(o => o.id === ns.id)
+      if (!os || ns.tabId === os.tabId) continue
+      // Tab changed within this server — compute animation direction
+      const srv = serverStore.servers.find(s => s.id === ns.id)
+      if (!srv) continue
+      const oldIdx = srv.tabs.findIndex(t => t.id === os.tabId)
+      const newIdx = srv.tabs.findIndex(t => t.id === ns.tabId)
+      const dir = (oldIdx >= 0 && newIdx > oldIdx) ? 'right' : 'left'
+      enteringState[ns.id + '::' + ns.tabId] = dir
     }
-
-    if (!oldTabId || newTabId === oldTabId) return
-
-    const tabs = server.value.tabs
-    const oldIdx = tabs.findIndex(t => t.id === oldTabId)
-    const newIdx = tabs.findIndex(t => t.id === newTabId)
-    enterDirection.value = (oldIdx >= 0 && newIdx > oldIdx) ? 'right' : 'left'
-
-    enteringPaneId.value = newTabId
   },
+  { deep: true },
 )
 
-function paneClasses(tabId) {
-  const isActive = tabId === server.value?.activeTabId
+function paneClasses(srv, tabId) {
+  const isActive = tabId === srv.activeTabId
   if (!isActive) return 'pane-hidden'
 
-  if (enteringPaneId.value === tabId) {
-    return enterDirection.value === 'right' ? 'pane-enter-right' : 'pane-enter-left'
+  const key = srv.id + '::' + tabId
+  if (enteringState[key]) {
+    return enteringState[key] === 'right' ? 'pane-enter-right' : 'pane-enter-left'
   }
   return 'pane-visible'
 }
 
-function handleAnimationEnd() {
-  enteringPaneId.value = null
+function handleAnimationEnd(_e) {
+  // Clear all entering states on any animation end
+  // (only one pane animates at a time, so clearing all is safe)
+  for (const key of Object.keys(enteringState)) {
+    delete enteringState[key]
+  }
 }
 
 // Catch Vue rendering errors
@@ -144,28 +135,36 @@ onMounted(async () => {
       <div class="flex flex-col flex-1 overflow-hidden min-w-0">
         <MainTabBar />
         <div class="flex-1 relative min-h-0 bg-[var(--color-bg-primary)]">
-          <WelcomeScreen v-if="!server" />
-          <template v-if="server">
+          <WelcomeScreen v-if="serverStore.servers.length === 0" />
+          <!-- Render all servers, keep them alive, only show the active one -->
+          <div
+            v-for="srv in serverStore.servers"
+            :key="srv.id"
+            v-show="srv.id === serverStore.activeServerId"
+            class="absolute inset-0"
+          >
+            <!-- Overview pane -->
             <div
-              :class="['absolute inset-0', paneClasses('overview')]"
+              :class="['absolute inset-0', paneClasses(srv, 'overview')]"
               @animationend="handleAnimationEnd"
             >
               <ServerOverview
-                :server-id="server.id"
-                :session-id="overviewSessionId"
-                :host="server.host"
+                :server-id="srv.id"
+                :session-id="getOverviewSessionId(srv)"
+                :host="srv.host"
               />
             </div>
+            <!-- Terminal panes -->
             <div
-              v-for="tab in server.tabs.filter(t => t.type === 'terminal')"
+              v-for="tab in srv.tabs.filter(t => t.type === 'terminal')"
               :key="tab.id"
-              :class="['absolute inset-0', paneClasses(tab.id)]"
+              :class="['absolute inset-0', paneClasses(srv, tab.id)]"
               @animationend="handleAnimationEnd"
             >
               <TerminalContainer
                 v-if="tab.sessionId"
                 :session-id="tab.sessionId"
-                :is-active="tab.id === server.activeTabId"
+                :is-active="srv.id === serverStore.activeServerId && tab.id === srv.activeTabId"
               />
               <div v-else class="flex items-center justify-center h-full">
                 <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
@@ -173,11 +172,11 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- File Manager tabs -->
+            <!-- File Manager panes -->
             <div
-              v-for="tab in server.tabs.filter(t => t.type === 'filemanager')"
+              v-for="tab in srv.tabs.filter(t => t.type === 'filemanager')"
               :key="tab.id"
-              :class="['absolute inset-0', paneClasses(tab.id)]"
+              :class="['absolute inset-0', paneClasses(srv, tab.id)]"
               @animationend="handleAnimationEnd"
             >
               <FileManager
@@ -189,7 +188,7 @@ onMounted(async () => {
                 <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
               </div>
             </div>
-          </template>
+          </div>
         </div>
       </div>
     </div>

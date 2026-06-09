@@ -42,6 +42,12 @@ pub struct AppSettings {
     pub monitor_refresh_secs: u32,
     #[serde(default = "default_ping_interval")]
     pub ping_interval_secs: u32,
+    #[serde(default = "default_accent_color")]
+    pub accent_color: String,
+    #[serde(default = "default_titlebar_style")]
+    pub titlebar_style: String,
+    #[serde(default = "default_statusbar_style")]
+    pub statusbar_style: String,
 }
 
 impl Default for AppSettings {
@@ -55,6 +61,9 @@ impl Default for AppSettings {
             terminal_color_preset: default_color_preset(),
             monitor_refresh_secs: default_monitor_refresh(),
             ping_interval_secs: default_ping_interval(),
+            accent_color: default_accent_color(),
+            titlebar_style: default_titlebar_style(),
+            statusbar_style: default_statusbar_style(),
         }
     }
 }
@@ -67,3 +76,6 @@ fn default_sidebar_width() -> u16 { 260 }
 fn default_color_preset() -> String { "default-dark".into() }
 fn default_monitor_refresh() -> u32 { 2 }
 fn default_ping_interval() -> u32 { 15 }
+fn default_accent_color() -> String { "#007AFF".into() }
+fn default_titlebar_style() -> String { "macos".into() }
+fn default_statusbar_style() -> String { "default".into() }

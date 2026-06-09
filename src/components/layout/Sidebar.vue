@@ -56,7 +56,7 @@ defineExpose({ newConnection })
     <!-- TOP: Open Servers -->
     <div class="flex-1 flex flex-col min-h-0">
       <div class="flex items-center px-3 py-2">
-        <span class="text-[10px] font-semibold tracking-widest text-[var(--color-text-tertiary)] uppercase">
+        <span class="text-[12px] font-semibold tracking-widest text-[var(--color-text-tertiary)] uppercase">
           {{ t('sidebar.openServers') }}
         </span>
       </div>
@@ -98,7 +98,7 @@ defineExpose({ newConnection })
     <!-- BOTTOM: Saved Servers -->
     <div class="flex flex-col" style="flex: 0 1 50%; min-height: 0;">
       <div class="flex items-center justify-between px-3 py-2">
-        <span class="text-[10px] font-semibold tracking-widest text-[var(--color-text-tertiary)] uppercase">
+        <span class="text-[12px] font-semibold tracking-widest text-[var(--color-text-tertiary)] uppercase">
           {{ t('sidebar.saved') }}
         </span>
         <button @click="newConnection"

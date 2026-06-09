@@ -73,7 +73,7 @@ export function useXterm(sessionIdRef) {
 
     resizeObserver = new ResizeObserver(() => {
       fitAddon.fit()
-      if (term.value && sessionId.value) {
+      if (term.value && sessionId.value && term.value.cols > 0 && term.value.rows > 0) {
         invoke('terminal_resize', {
           sessionId: sessionId.value,
           cols: term.value.cols,

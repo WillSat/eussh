@@ -1,6 +1,6 @@
 [package]
 name = "eussh"
-version = "1.1.0"
+version = "1.2.0"
 description = "An SSH client built with Tauri"
 authors = ["Eussh Contributors"]
 edition = "2021"

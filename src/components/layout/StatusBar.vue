@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useServerStore } from '@/stores/useServerStore'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useI18n } from '@/composables/useI18n'
 import { listen } from '@tauri-apps/api/event'
 
 const { t } = useI18n()
 const serverStore = useServerStore()
+const settingsStore = useSettingsStore()
 
 const now = ref(new Date())
 const progress = ref(null)
@@ -43,33 +45,10 @@ const terminalCount = computed(() => {
 
 const latencyMs = computed(() => serverStore.activeServer?.latency ?? null)
 
-// Modifier key tracking
-const pressedModifiers = ref(new Set())
-const displayModifier = ref(null)
-
-function onKeyDown(e) {
-  if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) {
-    const next = new Set(pressedModifiers.value)
-    next.add(e.key)
-    pressedModifiers.value = next
-    displayModifier.value = [...next].join('+')
-  }
-}
-function onKeyUp(e) {
-  if (pressedModifiers.value.has(e.key)) {
-    const next = new Set(pressedModifiers.value)
-    next.delete(e.key)
-    pressedModifiers.value = next
-    displayModifier.value = next.size > 0 ? [...next].join('+') : null
-  }
-}
-
 let completeTimer = null
 
 onMounted(async () => {
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
-  window.addEventListener('keydown', onKeyDown)
-  window.addEventListener('keyup', onKeyUp)
   const unlisten = await listen('sftp-progress', (e) => {
     const { operation, path, bytes_transferred, total_bytes } = e.payload
     const name = (path || '').split('/').pop() || path || '?'
@@ -98,52 +77,71 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearInterval(clockTimer)
   if (completeTimer) clearTimeout(completeTimer)
-  window.removeEventListener('keydown', onKeyDown)
-  window.removeEventListener('keyup', onKeyUp)
 })
+
+const isAccent = computed(() => settingsStore.statusbarStyle === 'accent')
+
+// Status dot color: on accent bg we use a light dot
+const dotClass = computed(() => {
+  const base = 'w-2 h-2 rounded-full shrink-0'
+  if (isAccent.value) {
+    return `${base} bg-white/70`
+  }
+  if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connected')) return `${base} bg-[var(--color-success)]`
+  if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connecting')) return `${base} bg-[var(--color-warning)]`
+  if (serverStore.activeServer?.tabs.some(t => t.status === 'connected')) return `${base} bg-[var(--color-success)]`
+  return `${base} bg-[var(--color-text-tertiary)]`
+})
+
+function getContainerClass() {
+  const base = 'flex items-center justify-between h-7 px-3 select-none border-t text-xs'
+  if (isAccent.value) {
+    return `${base} bg-[var(--color-accent)] text-white border-[var(--color-accent-hover)]`
+  }
+  return `${base} bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)]`
+}
+
+function getDimText() {
+  return isAccent.value ? 'text-white/60' : 'text-[var(--color-text-tertiary)]'
+}
+
+function getProgressBar() {
+  return isAccent.value ? 'bg-white/30' : 'bg-[var(--color-bg-tertiary)]'
+}
+
+function getProgressFill() {
+  return isAccent.value ? 'bg-white' : 'bg-[var(--color-accent)]'
+}
 </script>
 
 <template>
-  <div class="flex items-center justify-between h-7 px-3 select-none
-    bg-[var(--color-bg-secondary)] border-t border-[var(--color-border)]
-    text-xs text-[var(--color-text-secondary)]">
+  <div :class="getContainerClass()">
     <!-- Progress bar (above status bar) -->
-    <div v-if="progress" class="absolute bottom-7 left-0 right-0 h-1 bg-[var(--color-bg-tertiary)]">
+    <div v-if="progress" :class="['absolute bottom-7 left-0 right-0 h-1', getProgressBar()]">
       <div
         :class="[
-          'h-full transition-all duration-300',
-          progress.determinate ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-accent)] animate-pulse',
+          'h-full',
+          progress.determinate ? getProgressFill() : `${getProgressFill()} animate-pulse`,
         ]"
         :style="{ width: progress.determinate ? progress.percentage + '%' : '60%' }"
       />
     </div>
 
     <div class="flex items-center gap-2 min-w-0">
-      <span
-        :class="[
-          'w-2 h-2 rounded-full shrink-0',
-          serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connected') ? 'bg-[var(--color-success)]' :
-          serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connecting') ? 'bg-[var(--color-warning)]' :
-          serverStore.activeServer?.tabs.some(t => t.status === 'connected') ? 'bg-[var(--color-success)]' :
-          'bg-[var(--color-text-tertiary)]',
-        ]"
-      />
+      <span :class="dotClass" />
       <!-- Progress label replaces status text during transfer -->
-      <span v-if="progress" class="truncate text-[var(--color-accent)]">{{ progress.label }}</span>
+      <span v-if="progress" :class="['truncate', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ progress.label }}</span>
       <span v-else class="truncate">{{ statusText }}</span>
-      <span v-if="!progress && terminalCount > 0" class="text-[var(--color-text-tertiary)] shrink-0">
+      <span v-if="!progress && terminalCount > 0" :class="['shrink-0', getDimText()]">
         {{ t('status.terminals', { count: terminalCount }) }}
       </span>
-      <span v-if="!progress && latencyMs !== null" class="text-[var(--color-text-tertiary)] shrink-0">
+      <span v-if="!progress && latencyMs !== null" :class="['shrink-0', getDimText()]">
         {{ t('status.latency', { ms: latencyMs }) }}
       </span>
     </div>
     <div class="flex items-center min-w-[100px] justify-end gap-2">
-      <span v-if="completedMessage" class="text-[var(--color-accent)] text-xs">{{ completedMessage }}</span>
-      <span v-if="displayModifier" class="text-[var(--color-accent)] text-xs font-medium">
-        {{ displayModifier }}
-      </span>
-      <span v-else-if="!completedMessage && !progress" class="text-[var(--color-text-tertiary)] text-xs tabular-nums">
+      <span v-if="completedMessage" :class="['text-xs', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ completedMessage }}</span>
+      <span v-else-if="!progress" :class="['text-xs tabular-nums', getDimText()]">
         {{ formattedTime }}
       </span>
     </div>

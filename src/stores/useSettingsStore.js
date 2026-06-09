@@ -14,6 +14,8 @@ export const useSettingsStore = defineStore('settings', {
     monitorRefreshSecs: 2,
     pingIntervalSecs: 15,
     accentColor: '#007AFF',
+    titlebarStyle: 'macos',
+    statusbarStyle: 'default',
   }),
 
   getters: {
@@ -41,6 +43,8 @@ export const useSettingsStore = defineStore('settings', {
           if (s.monitor_refresh_secs) this.monitorRefreshSecs = s.monitor_refresh_secs
           if (s.ping_interval_secs) this.pingIntervalSecs = s.ping_interval_secs
           if (s.accent_color) this.accentColor = s.accent_color
+          if (s.titlebar_style) this.titlebarStyle = s.titlebar_style
+          if (s.statusbar_style) this.statusbarStyle = s.statusbar_style
         }
         try { localStorage.setItem('eussh-theme', this.theme) } catch {}
       } catch (_) {}
@@ -62,6 +66,8 @@ export const useSettingsStore = defineStore('settings', {
               monitor_refresh_secs: this.monitorRefreshSecs,
               ping_interval_secs: this.pingIntervalSecs,
               accent_color: this.accentColor,
+              titlebar_style: this.titlebarStyle,
+              statusbar_style: this.statusbarStyle,
             },
           },
         })
@@ -73,6 +79,16 @@ export const useSettingsStore = defineStore('settings', {
       this.applyTheme()
       this.save()
       try { localStorage.setItem('eussh-theme', theme) } catch {}
+    },
+
+    setTitlebarStyle(style) {
+      this.titlebarStyle = style
+      this.save()
+    },
+
+    setStatusbarStyle(style) {
+      this.statusbarStyle = style
+      this.save()
     },
 
     applyTheme() {
