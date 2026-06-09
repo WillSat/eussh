@@ -6,32 +6,16 @@
 
 ## 📸 截图
 
-### 主界面
-
 <table>
 <tr>
-<td width="50%"><img src=".pic/p1_cn.webp" alt="中文界面"><br><em>中文界面</em></td>
-<td width="50%"><img src=".pic/p2_en.webp" alt="English UI"><br><em>English UI</em></td>
-</tr>
-</table>
-
-### 终端 & 文件管理器
-
-<table>
-<tr>
-<td width="50%"><img src=".pic/p3_en.webp" alt="终端"><br><em>终端 — xterm.js 完整 PTY 交互</em></td>
-<td width="50%"><img src=".pic/p4_en.webp" alt="文件管理器"><br><em>文件管理器 — 上传/下载/拖拽/权限</em></td>
-</tr>
-</table>
-
-### 服务器总览 & 设置
-
-<table>
-<tr>
-<td><img src=".pic/p5_en.webp" alt="服务器总览"><br><em>服务器总览 — CPU / 内存 / 磁盘实时监控</em></td>
+<td width="33%"><img src=".pic/p1_cn.webp"></td>
+<td width="33%"><img src=".pic/p2_en.webp"></td>
+<td width="33%"><img src=".pic/p3_en.webp"></td>
 </tr>
 <tr>
-<td align="center"><img src=".pic/p6.webp" alt="设置面板" width="445"><br><em>设置面板 — 主题/配色/标题栏/底栏样式</em></td>
+<td width="33%"><img src=".pic/p4_en.webp"></td>
+<td width="33%"><img src=".pic/p5_en.webp"></td>
+<td width="33%"><img src=".pic/p6.webp"></td>
 </tr>
 </table>
 
