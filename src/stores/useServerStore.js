@@ -74,12 +74,16 @@ export const useServerStore = defineStore('servers', {
         srv.tabs[0].status = 'connected'
         connStore.updateLastConnected(profile.id)
         const pingMs = Math.max(5, useSettingsStore().pingIntervalSecs) * 1000
+        srv._pingPending = false
         srv._pingTimer = setInterval(async () => {
+          if (srv._pingPending) return  // skip if previous ping still in-flight
+          srv._pingPending = true
           try {
             const start = performance.now()
-            await invoke('exec_command', { sessionId, command: 'echo 1' })
+            await invoke('ping', { sessionId })
             srv.latency = Math.round(performance.now() - start)
           } catch { srv.latency = null }
+          finally { srv._pingPending = false }
         }, pingMs)
       } catch (e) {
         _log('overview connect FAILED', e?.message || e)

@@ -168,11 +168,12 @@ pub async fn file_read(
         .unwrap_or(0);
 
     let shared = state.ssh_manager.get_session(&session_id).await?;
-    let sess = shared.lock().await;
-    let mut ch: Channel<russh::client::Msg> = sess
-        .channel_open_session()
-        .await
-        .map_err(|e| format!("Channel open failed: {}", e))?;
+    let mut ch: Channel<russh::client::Msg> = {
+        let sess = shared.lock().await;
+        sess.channel_open_session()
+            .await
+            .map_err(|e| format!("Channel open failed: {}", e))?
+    }; // lock released — don't block other operations during transfer
     ch.exec(true, format!("cat {}", shell_escape(&remote_path)).as_bytes())
         .await
         .map_err(|e| format!("Exec failed: {}", e))?;
@@ -196,6 +197,8 @@ pub async fn file_read(
             _ => {}
         }
     }
+    let total = data.len() as u64;
+    state.ssh_manager.add_traffic(&session_id, 0, total).await;
     Ok(data)
 }
 
@@ -209,11 +212,12 @@ pub async fn file_write(
 ) -> Result<(), String> {
     let total = data.len();
     let shared = state.ssh_manager.get_session(&session_id).await?;
-    let sess = shared.lock().await;
-    let ch: Channel<russh::client::Msg> = sess
-        .channel_open_session()
-        .await
-        .map_err(|e| format!("Channel open failed: {}", e))?;
+    let ch: Channel<russh::client::Msg> = {
+        let sess = shared.lock().await;
+        sess.channel_open_session()
+            .await
+            .map_err(|e| format!("Channel open failed: {}", e))?
+    }; // lock released — don't block other operations during transfer
     ch.exec(true, format!("cat > {}", shell_escape(&remote_path)).as_bytes())
         .await
         .map_err(|e| format!("Exec failed: {}", e))?;
@@ -241,6 +245,7 @@ pub async fn file_write(
     }
     // Close stdin (send EOF)
     ch.eof().await.map_err(|e| format!("EOF failed: {}", e))?;
+    state.ssh_manager.add_traffic(&session_id, total as u64, 0).await;
     Ok(())
 }
 
@@ -261,11 +266,12 @@ pub async fn file_download_dir(
     remote_path: String,
 ) -> Result<Vec<u8>, String> {
     let shared = state.ssh_manager.get_session(&session_id).await?;
-    let sess = shared.lock().await;
-    let mut ch: Channel<russh::client::Msg> = sess
-        .channel_open_session()
-        .await
-        .map_err(|e| format!("Channel open failed: {}", e))?;
+    let mut ch: Channel<russh::client::Msg> = {
+        let sess = shared.lock().await;
+        sess.channel_open_session()
+            .await
+            .map_err(|e| format!("Channel open failed: {}", e))?
+    }; // lock released — don't block other operations during transfer
     let cmd = format!("tar czf - {} 2>/dev/null", shell_escape(&remote_path));
     ch.exec(true, cmd.as_bytes())
         .await
@@ -300,6 +306,7 @@ pub async fn file_download_dir(
         "bytes_transferred": total,
         "total_bytes": total,
     }));
+    state.ssh_manager.add_traffic(&session_id, 0, total as u64).await;
     Ok(data)
 }
 
@@ -364,9 +371,10 @@ async fn upload_file_raw(
     };
     let total = data.len();
     let shared = state.ssh_manager.get_session(session_id).await?;
-    let sess = shared.lock().await;
-    let ch: Channel<russh::client::Msg> = sess
-        .channel_open_session().await.map_err(|e| format!("Channel open: {}", e))?;
+    let ch: Channel<russh::client::Msg> = {
+        let sess = shared.lock().await;
+        sess.channel_open_session().await.map_err(|e| format!("Channel open: {}", e))?
+    }; // lock released — don't block other operations during transfer
     ch.exec(true, format!("cat > {}", shell_escape(&remote_path)).as_bytes())
         .await.map_err(|e| format!("Exec: {}", e))?;
     let chunk_size = 32768;
@@ -381,6 +389,7 @@ async fn upload_file_raw(
         }));
     }
     ch.eof().await.map_err(|e| format!("EOF: {}", e))?;
+    state.ssh_manager.add_traffic(session_id, total as u64, 0).await;
     Ok(())
 }
 

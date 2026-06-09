@@ -12,6 +12,8 @@ const settingsStore = useSettingsStore()
 const now = ref(new Date())
 const progress = ref(null)
 const completedMessage = ref(null)
+const trafficUp = ref(0)    // bytes/second upload
+const trafficDown = ref(0)  // bytes/second download
 let clockTimer = null
 
 function fmtBytes(b) {
@@ -19,6 +21,13 @@ function fmtBytes(b) {
   if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
   if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB'
   return (b / 1073741824).toFixed(2) + ' GB'
+}
+
+function fmtSpeed(bytesPerSec) {
+  if (bytesPerSec < 1024) return bytesPerSec + ' B/s'
+  if (bytesPerSec < 1048576) return (bytesPerSec / 1024).toFixed(1) + ' KB/s'
+  if (bytesPerSec < 1073741824) return (bytesPerSec / 1048576).toFixed(1) + ' MB/s'
+  return (bytesPerSec / 1073741824).toFixed(2) + ' GB/s'
 }
 
 const formattedTime = computed(() => {
@@ -37,19 +46,52 @@ const statusText = computed(() => {
   return t('status.disconnected')
 })
 
-const terminalCount = computed(() => {
-  const s = serverStore.activeServer
-  if (!s) return 0
-  return s.tabs.filter(t => t.type === 'terminal' && t.status === 'connected').length
+const trafficText = computed(() => {
+  if (!trafficUp.value && !trafficDown.value) return ''
+  const parts = []
+  if (trafficDown.value > 0) parts.push('↓ ' + fmtSpeed(trafficDown.value))
+  if (trafficUp.value > 0) parts.push('↑ ' + fmtSpeed(trafficUp.value))
+  return parts.join('  ')
 })
 
 const latencyMs = computed(() => serverStore.activeServer?.latency ?? null)
+
+// Unified notification slot on the right side.
+// Priority: completed message > progress label.
+// Add future notification sources here.
+const notification = computed(() => {
+  if (completedMessage.value) return completedMessage.value
+  if (progress.value) return progress.value.label
+  return null
+})
 
 let completeTimer = null
 
 onMounted(async () => {
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
-  const unlisten = await listen('sftp-progress', (e) => {
+
+  // Listen for per-second traffic stats from the Rust backend
+  const unlistenTraffic = await listen('traffic-stats', (e) => {
+    const stats = e.payload
+    const srv = serverStore.activeServer
+    if (!srv) {
+      trafficUp.value = 0
+      trafficDown.value = 0
+      return
+    }
+    // Aggregate traffic from all tabs/sessions of the active server
+    let up = 0, down = 0
+    for (const tab of srv.tabs) {
+      if (tab.sessionId && stats[tab.sessionId]) {
+        up += stats[tab.sessionId].upload || 0
+        down += stats[tab.sessionId].download || 0
+      }
+    }
+    trafficUp.value = up
+    trafficDown.value = down
+  })
+
+  const unlistenSftp = await listen('sftp-progress', (e) => {
     const { operation, path, bytes_transferred, total_bytes } = e.payload
     const name = (path || '').split('/').pop() || path || '?'
     const arrow = operation === 'upload' ? '↑' : '↓'
@@ -71,7 +113,11 @@ onMounted(async () => {
       progress.value = { arrow, name, pct: 0, label: `${arrow} ${name} ${fmtBytes(bytes_transferred)}`, percentage: 0, determinate: false }
     }
   })
-  onBeforeUnmount(() => unlisten?.())
+
+  onBeforeUnmount(() => {
+    unlistenTraffic?.()
+    unlistenSftp?.()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -81,11 +127,14 @@ onBeforeUnmount(() => {
 
 const isAccent = computed(() => settingsStore.statusbarStyle === 'accent')
 
-// Status dot color: on accent bg we use a light dot
+// Status dot color: on accent bg we use white variants to stay visible
 const dotClass = computed(() => {
   const base = 'w-2 h-2 rounded-full shrink-0'
   if (isAccent.value) {
-    return `${base} bg-white/70`
+    if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connected')) return `${base} bg-white`
+    if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connecting')) return `${base} bg-white/70 animate-pulse`
+    if (serverStore.activeServer?.tabs.some(t => t.status === 'connected')) return `${base} bg-white/80`
+    return `${base} bg-white/40`
   }
   if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connected')) return `${base} bg-[var(--color-success)]`
   if (serverStore.activeServer?.tabs.some(t => t.id === serverStore.activeServer?.activeTabId && t.status === 'connecting')) return `${base} bg-[var(--color-warning)]`
@@ -116,11 +165,11 @@ function getProgressFill() {
 
 <template>
   <div :class="getContainerClass()">
-    <!-- Progress bar (above status bar) -->
-    <div v-if="progress" :class="['absolute bottom-7 left-0 right-0 h-1', getProgressBar()]">
+    <!-- Progress bar (thin line above status bar) -->
+    <div v-if="progress" :class="['absolute bottom-7 left-0 right-0 h-0.5', getProgressBar()]">
       <div
         :class="[
-          'h-full',
+          'h-full transition-[width] duration-300',
           progress.determinate ? getProgressFill() : `${getProgressFill()} animate-pulse`,
         ]"
         :style="{ width: progress.determinate ? progress.percentage + '%' : '60%' }"
@@ -129,19 +178,17 @@ function getProgressFill() {
 
     <div class="flex items-center gap-2 min-w-0">
       <span :class="dotClass" />
-      <!-- Progress label replaces status text during transfer -->
-      <span v-if="progress" :class="['truncate', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ progress.label }}</span>
-      <span v-else class="truncate">{{ statusText }}</span>
-      <span v-if="!progress && terminalCount > 0" :class="['shrink-0', getDimText()]">
-        {{ t('status.terminals', { count: terminalCount }) }}
-      </span>
-      <span v-if="!progress && latencyMs !== null" :class="['shrink-0', getDimText()]">
+      <span class="truncate">{{ statusText }}</span>
+      <span v-if="latencyMs !== null" :class="['shrink-0', getDimText()]">
         {{ t('status.latency', { ms: latencyMs }) }}
       </span>
+      <!-- Network traffic (always visible, even during transfers) -->
+      <span v-if="trafficText" :class="['shrink-0', getDimText()]">{{ trafficText }}</span>
     </div>
     <div class="flex items-center min-w-[100px] justify-end gap-2">
-      <span v-if="completedMessage" :class="['text-xs', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ completedMessage }}</span>
-      <span v-else-if="!progress" :class="['text-xs tabular-nums', getDimText()]">
+      <!-- Unified notification slot (progress, completion, future notices) -->
+      <span v-if="notification" :class="['text-xs truncate max-w-[180px]', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ notification }}</span>
+      <span :class="['text-xs tabular-nums shrink-0', getDimText()]">
         {{ formattedTime }}
       </span>
     </div>

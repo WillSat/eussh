@@ -169,15 +169,18 @@ impl SshSession {
             });
 
             // Spawn exec command handler
+            // Opens a new channel per command and releases the session lock immediately
+            // so that concurrent exec commands (ping, monitor, file ops) don't block each other.
             let exec_session = session.clone();
             tokio::spawn(async move {
                 while let Some((cmd, reply)) = exec_rx.recv().await {
                     let result = async {
-                        let sess = exec_session.lock().await;
-                        let mut exec_channel = sess
-                            .channel_open_session()
-                            .await
-                            .map_err(|e| format!("exec channel failed: {}", e))?;
+                        let mut exec_channel = {
+                            let sess = exec_session.lock().await;
+                            sess.channel_open_session()
+                                .await
+                                .map_err(|e| format!("exec channel failed: {}", e))?
+                        }; // session lock released here — other execs can now proceed
                         exec_channel
                             .exec(true, cmd.as_bytes())
                             .await

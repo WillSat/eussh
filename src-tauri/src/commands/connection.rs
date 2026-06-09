@@ -1,6 +1,7 @@
 use tauri::State;
 use crate::state::AppState;
 use crate::models::connection::ConnectionProfile;
+use russh::ChannelMsg;
 
 #[tauri::command]
 pub async fn connect(
@@ -45,6 +46,35 @@ pub async fn exec_command(
     command: String,
 ) -> Result<String, String> {
     state.ssh_manager.exec_command(&session_id, &command).await
+}
+
+#[tauri::command]
+pub async fn ping(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<(), String> {
+    // Dedicated ping: opens its own SSH channel directly, bypassing the exec queue.
+    // Session lock is released immediately after channel open so concurrent operations
+    // (other pings, file transfers, exec commands) are never blocked.
+    let shared = state.ssh_manager.get_session(&session_id).await?;
+    let mut ch = {
+        let sess = shared.lock().await;
+        sess.channel_open_session()
+            .await
+            .map_err(|e| format!("ping channel open: {}", e))?
+    }; // lock released here
+    ch.exec(true, b"echo 1")
+        .await
+        .map_err(|e| format!("ping exec: {}", e))?;
+    // Drain output until channel closes
+    loop {
+        match ch.wait().await {
+            Some(ChannelMsg::Data { .. }) => {}
+            Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break,
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]

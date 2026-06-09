@@ -48,6 +48,8 @@ async function handlePaste() {
       })
     }
   } catch {}
+  // Refocus the terminal so the user can continue typing immediately
+  term.value?.focus()
 }
 
 onMounted(async () => {

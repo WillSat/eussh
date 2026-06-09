@@ -1,5 +1,8 @@
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from '@/composables/useI18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -32,12 +35,12 @@ function onPaste() {
           @click="onCopy"
           class="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-primary)]
             hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center gap-2"
-        >&#x2398; Copy</button>
+        >&#x2398; {{ t('terminal.copy') }}</button>
         <button
           @click="onPaste"
           class="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-primary)]
             hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center gap-2"
-        >&#x2384; Paste</button>
+        >&#x2384; {{ t('terminal.paste') }}</button>
       </div>
     </div>
   </Teleport>
