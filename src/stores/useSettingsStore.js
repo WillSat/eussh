@@ -16,6 +16,7 @@ export const useSettingsStore = defineStore('settings', {
     accentColor: '#007AFF',
     titlebarStyle: 'macos',
     statusbarStyle: 'default',
+    showTraffic: true,
   }),
 
   getters: {
@@ -45,6 +46,7 @@ export const useSettingsStore = defineStore('settings', {
           if (s.accent_color) this.accentColor = s.accent_color
           if (s.titlebar_style) this.titlebarStyle = s.titlebar_style
           if (s.statusbar_style) this.statusbarStyle = s.statusbar_style
+          if (s.show_traffic !== undefined) this.showTraffic = s.show_traffic
         }
         try { localStorage.setItem('eussh-theme', this.theme) } catch {}
       } catch (_) {}
@@ -68,6 +70,7 @@ export const useSettingsStore = defineStore('settings', {
               accent_color: this.accentColor,
               titlebar_style: this.titlebarStyle,
               statusbar_style: this.statusbarStyle,
+              show_traffic: this.showTraffic,
             },
           },
         })

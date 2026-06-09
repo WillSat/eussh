@@ -8,18 +8,15 @@ mod models;
 
 use state::AppState;
 use commands::{config, connection, file};
-use tauri::Manager;
 
 fn main() {
+    let app_state = AppState {
+        config_store: storage::config_store::ConfigStore::new(),
+        ssh_manager: ssh::manager::SshManager::new(),
+    };
+
     tauri::Builder::default()
-        .setup(|app| {
-            let app_state = AppState {
-                config_store: storage::config_store::ConfigStore::new(),
-                ssh_manager: ssh::manager::SshManager::new(app.handle().clone()),
-            };
-            app.manage(app_state);
-            Ok(())
-        })
+        .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             config::get_config,
             config::save_config,
@@ -31,6 +28,7 @@ fn main() {
             connection::terminal_resize,
             connection::exec_command,
             connection::ping,
+            connection::server_traffic,
             connection::clipboard_read,
             connection::clipboard_write,
             file::file_list,

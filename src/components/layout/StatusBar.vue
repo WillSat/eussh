@@ -12,8 +12,6 @@ const settingsStore = useSettingsStore()
 const now = ref(new Date())
 const progress = ref(null)
 const completedMessage = ref(null)
-const trafficUp = ref(0)    // bytes/second upload
-const trafficDown = ref(0)  // bytes/second download
 let clockTimer = null
 
 function fmtBytes(b) {
@@ -47,10 +45,12 @@ const statusText = computed(() => {
 })
 
 const trafficText = computed(() => {
-  if (!trafficUp.value && !trafficDown.value) return ''
+  if (!settingsStore.showTraffic) return ''
+  const srv = serverStore.activeServer
+  if (!srv || (!srv.trafficUp && !srv.trafficDown)) return ''
   const parts = []
-  if (trafficDown.value > 0) parts.push('↓ ' + fmtSpeed(trafficDown.value))
-  if (trafficUp.value > 0) parts.push('↑ ' + fmtSpeed(trafficUp.value))
+  if (srv.trafficDown > 0) parts.push('↓ ' + fmtSpeed(srv.trafficDown))
+  if (srv.trafficUp > 0) parts.push('↑ ' + fmtSpeed(srv.trafficUp))
   return parts.join('  ')
 })
 
@@ -69,27 +69,6 @@ let completeTimer = null
 
 onMounted(async () => {
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
-
-  // Listen for per-second traffic stats from the Rust backend
-  const unlistenTraffic = await listen('traffic-stats', (e) => {
-    const stats = e.payload
-    const srv = serverStore.activeServer
-    if (!srv) {
-      trafficUp.value = 0
-      trafficDown.value = 0
-      return
-    }
-    // Aggregate traffic from all tabs/sessions of the active server
-    let up = 0, down = 0
-    for (const tab of srv.tabs) {
-      if (tab.sessionId && stats[tab.sessionId]) {
-        up += stats[tab.sessionId].upload || 0
-        down += stats[tab.sessionId].download || 0
-      }
-    }
-    trafficUp.value = up
-    trafficDown.value = down
-  })
 
   const unlistenSftp = await listen('sftp-progress', (e) => {
     const { operation, path, bytes_transferred, total_bytes } = e.payload
@@ -115,7 +94,6 @@ onMounted(async () => {
   })
 
   onBeforeUnmount(() => {
-    unlistenTraffic?.()
     unlistenSftp?.()
   })
 })

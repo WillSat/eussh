@@ -197,8 +197,6 @@ pub async fn file_read(
             _ => {}
         }
     }
-    let total = data.len() as u64;
-    state.ssh_manager.add_traffic(&session_id, 0, total).await;
     Ok(data)
 }
 
@@ -245,7 +243,6 @@ pub async fn file_write(
     }
     // Close stdin (send EOF)
     ch.eof().await.map_err(|e| format!("EOF failed: {}", e))?;
-    state.ssh_manager.add_traffic(&session_id, total as u64, 0).await;
     Ok(())
 }
 
@@ -306,7 +303,6 @@ pub async fn file_download_dir(
         "bytes_transferred": total,
         "total_bytes": total,
     }));
-    state.ssh_manager.add_traffic(&session_id, 0, total as u64).await;
     Ok(data)
 }
 
@@ -389,7 +385,6 @@ async fn upload_file_raw(
         }));
     }
     ch.eof().await.map_err(|e| format!("EOF: {}", e))?;
-    state.ssh_manager.add_traffic(session_id, total as u64, 0).await;
     Ok(())
 }
 

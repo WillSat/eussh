@@ -85,6 +85,34 @@ export const useServerStore = defineStore('servers', {
           } catch { srv.latency = null }
           finally { srv._pingPending = false }
         }, pingMs)
+
+        // Server-side traffic polling (reads /proc/net/dev, zero client overhead)
+        // Only start if enabled in settings
+        const settings = useSettingsStore()
+        srv.trafficUp = 0
+        srv.trafficDown = 0
+        if (settings.showTraffic) {
+          const trafficMs = 5000
+          srv._trafficPrev = null
+          srv._trafficTimer = setInterval(async () => {
+          try {
+            const stats = await invoke('server_traffic', { sessionId })
+            const now = performance.now()
+            if (srv._trafficPrev) {
+              const elapsed = (now - srv._trafficPrev.time) / 1000
+              if (elapsed > 0) {
+                srv.trafficUp = Math.max(0, Math.round((stats.tx_bytes - srv._trafficPrev.tx) / elapsed))
+                srv.trafficDown = Math.max(0, Math.round((stats.rx_bytes - srv._trafficPrev.rx) / elapsed))
+              }
+            }
+            srv._trafficPrev = { time: now, rx: stats.rx_bytes, tx: stats.tx_bytes }
+          } catch {
+            srv.trafficUp = 0
+            srv.trafficDown = 0
+            srv._trafficPrev = null
+          }
+        }, trafficMs)
+        }
       } catch (e) {
         _log('overview connect FAILED', e?.message || e)
         const srv = this.servers.find(s => s.id === profile.id)
@@ -99,6 +127,7 @@ export const useServerStore = defineStore('servers', {
       const server = this.servers[idx]
       const connStore = useConnectionStore()
       clearInterval(server._pingTimer)
+      clearInterval(server._trafficTimer)
       for (const tab of server.tabs) {
         if (tab.sessionId) connStore.disconnect(tab.sessionId).catch(() => {})
       }

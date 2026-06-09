@@ -1,7 +1,14 @@
+use serde::Serialize;
 use tauri::State;
 use crate::state::AppState;
 use crate::models::connection::ConnectionProfile;
 use russh::ChannelMsg;
+
+#[derive(Serialize, Clone, Debug)]
+pub struct TrafficStats {
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+}
 
 #[tauri::command]
 pub async fn connect(
@@ -75,6 +82,29 @@ pub async fn ping(
         }
     }
     Ok(())
+}
+
+/// Query server network interface traffic from /proc/net/dev.
+/// Sums all non-loopback interfaces. Returns cumulative RX/TX byte counters.
+/// Frontend computes delta between consecutive calls to get speed.
+#[tauri::command]
+pub async fn server_traffic(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<TrafficStats, String> {
+    let out = state.ssh_manager.exec_command(&session_id, "cat /proc/net/dev 2>/dev/null || echo ''").await?;
+    let mut rx: u64 = 0;
+    let mut tx: u64 = 0;
+    for line in out.lines().skip(2) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 10 { continue; }
+        // Skip loopback
+        let iface = parts[0].trim_end_matches(':');
+        if iface == "lo" { continue; }
+        rx += parts[1].parse::<u64>().unwrap_or(0);
+        tx += parts[9].parse::<u64>().unwrap_or(0);
+    }
+    Ok(TrafficStats { rx_bytes: rx, tx_bytes: tx })
 }
 
 #[tauri::command]
