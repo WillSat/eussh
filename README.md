@@ -7,9 +7,7 @@
 ## 📸 截图
 
 <table>
-<tr><td><img src=".pic/p1_cn.webp"></td><td width="445" rowspan="5" valign="top"><img src=".pic/p6.webp"></td></tr>
-<tr><td><img src=".pic/p2_en.webp"></td></tr>
-<tr><td><img src=".pic/p3_en.webp"></td></tr>
+<tr><td><img src=".pic/p2_en.webp"></td><td rowspan="3" valign="top"><img src=".pic/p6.webp"></td></tr>
 <tr><td><img src=".pic/p4_en.webp"></td></tr>
 <tr><td><img src=".pic/p5_en.webp"></td></tr>
 </table>
@@ -18,7 +16,7 @@
 
 - **多服务器** — 同时连接多个服务器，一键切换，各服务器终端完全独立
 - **多标签页** — 一个服务器可同时打开多个终端和文件管理器
-- **服务器总览** — CPU、内存、磁盘使用率实时监控
+- **服务器总览** — CPU、内存、磁盘、交换分区实时监控 + 世界地图服务器定位 + 全部 IP 展示
 - **文件管理器** — 列表/图标视图、上传/下载、拖拽上传、权限管理
 - **SSH 连接** — 密码和私钥认证（纯 Rust `russh` 实现，无 C 依赖）
 - **界面自定义** — 标题栏（macOS / Windows 11 风格）、底栏（默认 / 主题色）、6 种终端配色、8 种强调色
@@ -26,6 +24,7 @@
 - **实时流量** — 底栏显示服务器上下行流量速率，终端和文件传输数据全覆盖
 - **精确延迟** — 独立通道 ping 检测，不受命令队列阻塞
 - **多语言** — 中文 / English
+- **版本更新** — 启动时自动检查 GitHub Release，一键跳转下载
 
 ## 📦 安装
 
@@ -101,7 +100,8 @@ npx tauri build
 - 终端配色方案（6 种）
 - 自定义强调色（8 种预设）
 - 终端字体、字号、光标样式
-- 监控刷新间隔
+- 监控刷新间隔、延迟检测间隔、流量监控
+- 启动时自动检查更新
 
 ## 🏗 技术栈
 

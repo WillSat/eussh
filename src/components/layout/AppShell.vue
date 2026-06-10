@@ -11,6 +11,7 @@ import FileManager from '../filemanager/FileManager.vue'
 import Toast from '../common/Toast.vue'
 import SettingsPanel from '../settings/SettingsPanel.vue'
 import DebugPanel from './DebugPanel.vue'
+import VersionCheck from './VersionCheck.vue'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useServerStore } from '@/stores/useServerStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -201,5 +202,6 @@ onMounted(async () => {
       @close="closeToast"
     />
     <DebugPanel />
+    <VersionCheck />
   </div>
 </template>

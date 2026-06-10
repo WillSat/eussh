@@ -28,12 +28,12 @@ npx tauri build          # Full production build with frontend embedding → ins
 ```
 App.vue
 └── AppShell.vue
-    ├── TitleBar.vue              — Window title, settings toggle, debug toggle
+    ├── TitleBar.vue              — Window title + settings toggle (debug toggle hidden)
     ├── Sidebar.vue               — Open servers (top) + saved servers (bottom) + ConnectionDialog
     ├── MainTabBar.vue            — Tab strip: overview / terminal / filemanager
     ├── [Content Area]
     │   ├── WelcomeScreen.vue     — Shown when no server connected
-    │   ├── ServerOverview.vue    — CPU/Mem/Disk/Uptime monitoring (useMonitor composable)
+    │   ├── ServerOverview.vue    — Donut gauges (CPU/Mem/Disk/Swap) + world map + info cards (useServerData composable)
     │   ├── TerminalContainer.vue — xterm.js terminal (useXterm composable)
     │   └── FileManager.vue       — File browser
     │       ├── BreadcrumbBar.vue
@@ -50,13 +50,19 @@ App.vue
 - **`useSettingsStore`** (`src/stores/useSettingsStore.js`) — App settings (theme, font, language, etc.). Persists via `invoke('get_config')` / `invoke('save_config')`.
 - **`useFileManagerStore`** (`src/stores/useFileManagerStore.js`) — Per-session file browser state: `paths`, `entries`, `loading`, `errors`, `selections`, `clipboards`, navigation history (`navBack`, `navForward`). All state is keyed by `sessionId` to support multiple concurrent file manager tabs.
 
+### Composables
+
+- **`useServerData`** (`src/composables/useServerData.js`) — Replaced `useMonitor` for the overview page. Split into `fetchDynamic()` (CPU/memory/disk/swap — polled every `monitorRefreshSecs`, min 3s) and `fetchStatic()` (hostname, OS, kernel, uptime, timezone, all IPs, geo — fetched once at connection). Uses `Promise.allSettled` for concurrent execution with per-command timeouts.
+- **`useMonitor`** (`src/composables/useMonitor.js`) — Legacy; still available but no longer used by ServerOverview.
+
 ### Tauri Commands (Rust)
 
 All in `src-tauri/src/commands/`:
 
 **Config** (`config.rs`): `get_config`, `save_config`, `save_connection`, `delete_connection`
-**Connection** (`connection.rs`): `connect`, `disconnect`, `terminal_write`, `terminal_resize`, `exec_command`, `clipboard_read`, `clipboard_write`
+**Connection** (`connection.rs`): `connect`, `disconnect`, `terminal_write`, `terminal_resize`, `exec_command`, `ping`, `server_traffic`, `clipboard_read`, `clipboard_write`
 **File** (`file.rs`): `file_list`, `file_mkdir`, `file_remove`, `file_rename`, `file_copy`, `file_exists`, `file_read`, `file_write`, `file_download_dir`, `file_upload_path`, `file_chmod`
+**Open** (`open.rs`): `open_url` — opens a URL in the system browser (cross-platform: `cmd /c start` on Windows, `open` on macOS, `xdg-open` on Linux). Uses `CREATE_NO_WINDOW` on Windows.
 
 ### SSH Layer (`src-tauri/src/ssh/`)
 
@@ -134,6 +140,12 @@ Any `std::process::Command` on Windows must set `creation_flags(0x08000000)` to 
 "beforeDevCommand": "node node_modules/vite/bin/vite.js"
 ```
 Bypasses `npm.cmd` and `vite.cmd` batch files. On Windows, `.cmd` files require `cmd.exe` (which is console-subsystem), causing a flash. Calling `node.exe` directly avoids the `cmd.exe` intermediaries entirely.
+
+## Key Behaviours
+
+- **Version check:** `VersionCheck.vue` fetches GitHub releases API on startup (delayed 3s). Uses `getVersion()` from Tauri API for current version. Only `goDownload()` permanently skips a version; `remindLater()` re-prompts on next launch. Gated by `settings.checkUpdates` (default: true). Opens URLs via `open_url` Tauri command.
+- **Settings defaults:** `monitorRefreshSecs=10` (min 3s), `pingIntervalSecs=5` (min 3s), `fontFamily="Consolas, 'Courier New'"`, `checkUpdates=true`.
+- **ServerOverview data flow:** `fetchDynamic()` runs first → `firstLoadDone=true` → skeleton fades out, gauges appear. `fetchStatic()` runs concurrently — info cards (hostname, OS, uptime, timezone, IPs) fill in as data arrives. Only dynamic metrics poll on the interval.
 
 ## Toolchain
 

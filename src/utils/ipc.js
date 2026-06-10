@@ -23,6 +23,7 @@ export const IPC = {
   FILE_DOWNLOAD_DIR: 'file_download_dir',
   FILE_UPLOAD_PATH: 'file_upload_path',
   FILE_CHMOD: 'file_chmod',
+  OPEN_URL: 'open_url',
 }
 
 export async function invoke(command, args = {}) {

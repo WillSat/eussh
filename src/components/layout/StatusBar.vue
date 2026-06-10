@@ -55,10 +55,11 @@ const trafficText = computed(() => {
 })
 
 const latencyMs = computed(() => serverStore.activeServer?.latency ?? null)
+const latencyText = computed(() => {
+  if (latencyMs.value === null) return ''
+  return t('status.latency', { ms: latencyMs.value })
+})
 
-// Unified notification slot on the right side.
-// Priority: completed message > progress label.
-// Add future notification sources here.
 const notification = computed(() => {
   if (completedMessage.value) return completedMessage.value
   if (progress.value) return progress.value.label
@@ -88,7 +89,6 @@ onMounted(async () => {
         }, 1000)
       }
     } else {
-      // Indeterminate progress (e.g. directory archive download)
       progress.value = { arrow, name, pct: 0, label: `${arrow} ${name} ${fmtBytes(bytes_transferred)}`, percentage: 0, determinate: false }
     }
   })
@@ -105,7 +105,6 @@ onBeforeUnmount(() => {
 
 const isAccent = computed(() => settingsStore.statusbarStyle === 'accent')
 
-// Status dot color: on accent bg we use white variants to stay visible
 const dotClass = computed(() => {
   const base = 'w-2 h-2 rounded-full shrink-0'
   if (isAccent.value) {
@@ -143,7 +142,7 @@ function getProgressFill() {
 
 <template>
   <div :class="getContainerClass()">
-    <!-- Progress bar (thin line above status bar) -->
+    <!-- Progress bar -->
     <div v-if="progress" :class="['absolute bottom-7 left-0 right-0 h-0.5', getProgressBar()]">
       <div
         :class="[
@@ -157,18 +156,13 @@ function getProgressFill() {
     <div class="flex items-center gap-2 min-w-0">
       <span :class="dotClass" />
       <span class="truncate">{{ statusText }}</span>
-      <span v-if="latencyMs !== null" :class="['shrink-0', getDimText()]">
-        {{ t('status.latency', { ms: latencyMs }) }}
-      </span>
-      <!-- Network traffic (always visible, even during transfers) -->
+      <span v-if="latencyMs !== null" :class="['shrink-0', getDimText()]">{{ latencyText }}</span>
       <span v-if="trafficText" :class="['shrink-0', getDimText()]">{{ trafficText }}</span>
     </div>
+
     <div class="flex items-center min-w-[100px] justify-end gap-2">
-      <!-- Unified notification slot (progress, completion, future notices) -->
       <span v-if="notification" :class="['text-xs truncate max-w-[180px]', isAccent ? 'text-white' : 'text-[var(--color-accent)]']">{{ notification }}</span>
-      <span :class="['text-xs tabular-nums shrink-0', getDimText()]">
-        {{ formattedTime }}
-      </span>
+      <span :class="['text-xs tabular-nums shrink-0', getDimText()]">{{ formattedTime }}</span>
     </div>
   </div>
 </template>

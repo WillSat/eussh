@@ -17,7 +17,6 @@ const emit = defineEmits(['update:showSettings'])
 const serverStore = useServerStore()
 const settingsStore = useSettingsStore()
 const win = getCurrentWindow()
-const { logState } = log
 
 const title = computed(() => {
   const s = serverStore.activeServer
@@ -31,10 +30,6 @@ function toggleSettings() {
   emit('update:showSettings', !props.showSettings)
 }
 
-function toggleDebug() {
-  logState.showPanel = !logState.showPanel
-}
-
 function minimize() { win.minimize() }
 function toggleMaximize() { win.toggleMaximize() }
 function close() { win.close() }
@@ -46,14 +41,8 @@ function close() { win.close() }
     class="flex items-center justify-between h-8 shrink-0 select-none
       bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]"
   >
-    <!-- Left: debug + settings -->
+    <!-- Left: settings -->
     <div class="flex items-center gap-1 pl-2">
-      <button
-        @click="toggleDebug"
-        class="px-2 py-1 text-[11px] font-medium rounded
-          text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]
-          hover:bg-[var(--color-bg-tertiary)] transition-colors"
-      >{{ t('titlebar.debug') }}</button>
       <button
         @click="toggleSettings"
         class="px-2 py-1 text-[11px] font-medium rounded

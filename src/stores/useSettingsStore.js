@@ -6,17 +6,18 @@ export const useSettingsStore = defineStore('settings', {
     theme: 'system',
     language: '',
     fontSize: 16,
-    fontFamily: "Consolas, 'Courier New', monospace",
+    fontFamily: "Consolas, 'Courier New'",
     cursorStyle: 'bar',
     scrollback: 10000,
     sidebarWidth: 260,
     terminalColorPreset: 'default-dark',
-    monitorRefreshSecs: 2,
-    pingIntervalSecs: 15,
+    monitorRefreshSecs: 10,
+    pingIntervalSecs: 5,
     accentColor: '#007AFF',
     titlebarStyle: 'macos',
     statusbarStyle: 'default',
     showTraffic: true,
+    checkUpdates: true,
   }),
 
   getters: {
@@ -47,6 +48,7 @@ export const useSettingsStore = defineStore('settings', {
           if (s.titlebar_style) this.titlebarStyle = s.titlebar_style
           if (s.statusbar_style) this.statusbarStyle = s.statusbar_style
           if (s.show_traffic !== undefined) this.showTraffic = s.show_traffic
+          if (s.check_updates !== undefined) this.checkUpdates = s.check_updates
         }
         try { localStorage.setItem('eussh-theme', this.theme) } catch {}
       } catch (_) {}
@@ -71,6 +73,7 @@ export const useSettingsStore = defineStore('settings', {
               titlebar_style: this.titlebarStyle,
               statusbar_style: this.statusbarStyle,
               show_traffic: this.showTraffic,
+              check_updates: this.checkUpdates,
             },
           },
         })

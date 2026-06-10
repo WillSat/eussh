@@ -7,7 +7,7 @@ mod storage;
 mod models;
 
 use state::AppState;
-use commands::{config, connection, file};
+use commands::{config, connection, file, open};
 
 fn main() {
     let app_state = AppState {
@@ -42,6 +42,7 @@ fn main() {
             file::file_download_dir,
             file::file_upload_path,
             file::file_chmod,
+            open::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
