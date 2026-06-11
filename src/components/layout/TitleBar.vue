@@ -9,11 +9,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 const log = useLogger('TitleBar')
 const { t } = useI18n()
 
-const props = defineProps({
-  showSettings: { type: Boolean, default: false },
-})
-const emit = defineEmits(['update:showSettings'])
-
 const serverStore = useServerStore()
 const settingsStore = useSettingsStore()
 const win = getCurrentWindow()
@@ -25,9 +20,8 @@ const title = computed(() => {
 
 watch(title, (t) => { try { win.setTitle(t) } catch {} }, { immediate: true })
 
-function toggleSettings() {
-  log.info('toggle settings', { from: props.showSettings, to: !props.showSettings })
-  emit('update:showSettings', !props.showSettings)
+function toggleDebug() {
+  log.togglePanel()
 }
 
 function minimize() { win.minimize() }
@@ -41,14 +35,15 @@ function close() { win.close() }
     class="flex items-center justify-between h-8 shrink-0 select-none
       bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]"
   >
-    <!-- Left: settings -->
+    <!-- Left: debug toggle -->
     <div class="flex items-center gap-1 pl-2">
       <button
-        @click="toggleSettings"
+        v-if="settingsStore.showDebug"
+        @click="toggleDebug"
         class="px-2 py-1 text-[11px] font-medium rounded
           text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]
           hover:bg-[var(--color-bg-tertiary)] transition-colors"
-      >{{ t('titlebar.settings') }}</button>
+      >{{ t('titlebar.debug') }}</button>
     </div>
 
     <!-- Center title -->

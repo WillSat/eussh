@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, toRef, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, toRef, watch } from 'vue'
 import { useXterm } from '@/composables/useXterm'
 import { invoke } from '@/utils/ipc'
+import { useSettingsStore } from '@/stores/useSettingsStore'
+import { getTerminalTheme } from '@/utils/theme'
 import TerminalMenu from './TerminalMenu.vue'
 
 const props = defineProps({
@@ -11,6 +13,9 @@ const props = defineProps({
 
 const sessionIdRef = toRef(props, 'sessionId')
 const { term, containerRef, init, refitAndFocus, getSelection } = useXterm(sessionIdRef)
+
+const settings = useSettingsStore()
+const terminalBg = computed(() => getTerminalTheme(settings.terminalColorPreset).background)
 
 const menuVisible = ref(false)
 const menuX = ref(0)
@@ -63,7 +68,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="terminal-container h-full w-full p-2" />
+  <div ref="containerRef" class="terminal-container h-full w-full p-2" :style="{ backgroundColor: terminalBg }" />
   <TerminalMenu
     :visible="menuVisible"
     :x="menuX"

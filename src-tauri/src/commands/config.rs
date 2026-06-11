@@ -52,3 +52,4 @@ pub async fn delete_connection(
     config.connections.retain(|c| c.id != id);
     state.config_store.save(&config)
 }
+

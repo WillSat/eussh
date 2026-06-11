@@ -48,6 +48,12 @@ pub struct AppSettings {
     pub titlebar_style: String,
     #[serde(default = "default_statusbar_style")]
     pub statusbar_style: String,
+    #[serde(default = "default_show_traffic")]
+    pub show_traffic: bool,
+    #[serde(default = "default_check_updates")]
+    pub check_updates: bool,
+    #[serde(default = "default_show_debug")]
+    pub show_debug: bool,
 }
 
 impl Default for AppSettings {
@@ -64,18 +70,24 @@ impl Default for AppSettings {
             accent_color: default_accent_color(),
             titlebar_style: default_titlebar_style(),
             statusbar_style: default_statusbar_style(),
+            show_traffic: default_show_traffic(),
+            check_updates: default_check_updates(),
+            show_debug: default_show_debug(),
         }
     }
 }
 
 fn default_font_size() -> u16 { 14 }
-fn default_font_family() -> String { "monospace".into() }
+fn default_font_family() -> String { "Consolas, 'Courier New'".into() }
 fn default_cursor_style() -> String { "bar".into() }
 fn default_scrollback() -> u32 { 10000 }
 fn default_sidebar_width() -> u16 { 260 }
 fn default_color_preset() -> String { "default-dark".into() }
-fn default_monitor_refresh() -> u32 { 2 }
+fn default_monitor_refresh() -> u32 { 3 }
 fn default_ping_interval() -> u32 { 15 }
 fn default_accent_color() -> String { "#007AFF".into() }
 fn default_titlebar_style() -> String { "macos".into() }
 fn default_statusbar_style() -> String { "default".into() }
+fn default_show_traffic() -> bool { true }
+fn default_check_updates() -> bool { true }
+fn default_show_debug() -> bool { false }

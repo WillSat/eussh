@@ -3,12 +3,17 @@ import { useConnectionStore } from './useConnectionStore'
 import { useToast } from '@/composables/useToast'
 import { invoke } from '@/utils/ipc'
 import { useSettingsStore } from './useSettingsStore'
+import { useLogger } from '@/composables/useLogger'
 
 function makeTabId() {
   return 'term-' + Math.random().toString(36).slice(2, 8)
 }
 
-const _log = (...args) => { try { console.log('[ServerStore]', ...args) } catch {} }
+const log = useLogger('ServerStore')
+
+// Non-reactive module-level state for reconnect management
+const _reconnectTimers = new Map()    // tabId → setTimeout id
+const _reconnectCancel = new Set()    // sessionIds being manually disconnected
 
 export const useServerStore = defineStore('servers', {
   state: () => ({
@@ -38,13 +43,95 @@ export const useServerStore = defineStore('servers', {
       return null
     },
 
+    // ── Reconnect state (non-reactive module-level) ─────────────────
+    // _reconnectTimers: Map<sessionId, timerId> — cleared on manual close
+    // _reconnectAttempts: Map<sessionId, { profile, serverId, tabId, attempt }>
+    // _reconnectCancel: Set<sessionId> — cancel signal
+
     setTabStatus(sessionId, status) {
       const found = this._findTab(sessionId)
-      if (found) found.tab.status = status
+      if (found) {
+        found.tab.status = status
+        if (status === 'disconnected') {
+          this._onDisconnected(sessionId)
+        }
+      }
+    },
+
+    // ── Auto-reconnect ────────────────────────────────────────────
+    _onDisconnected(sessionId) {
+      // Skip if this session was cancelled (manual close)
+      if (_reconnectCancel.has(sessionId)) {
+        _reconnectCancel.delete(sessionId)
+        return
+      }
+      const found = this._findTab(sessionId)
+      if (!found) return
+      const { server, tab } = found
+      if (tab.type === 'overview' && tab.status !== 'disconnected') return
+
+      const connStore = useConnectionStore()
+      const profile = connStore.profiles.find(p => p.id === server.id)
+      if (!profile) return
+
+      this._startReconnect(profile, server.id, tab.id, 1)
+    },
+
+    _startReconnect(profile, serverId, tabId, attempt) {
+      const MAX = 5
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+      const delay = Math.min(30000, Math.pow(2, attempt - 1) * 1000)
+
+      const server = this.servers.find(s => s.id === serverId)
+      const tab = server?.tabs.find(t => t.id === tabId)
+      if (!tab) return
+
+      tab.status = 'reconnecting'
+      tab._reconnectInfo = { n: attempt, max: MAX }
+
+      const timerId = setTimeout(async () => {
+        const srv = this.servers.find(s => s.id === serverId)
+        const t = srv?.tabs.find(t => t.id === tabId)
+        if (!t || t.status !== 'reconnecting') return
+
+        const connStore = useConnectionStore()
+        const fresh = connStore.profiles.find(p => p.id === serverId)
+        if (!fresh) { t.status = 'error'; return }
+
+        try {
+          const newSessionId = await connStore.connect(fresh)
+          t.sessionId = newSessionId
+          t.status = 'connected'
+          t._reconnectInfo = undefined
+        } catch {
+          if (attempt >= MAX) {
+            t.status = 'error'
+            t._reconnectInfo = undefined
+            log.warn('reconnect gave up', { tabId, attempts: attempt })
+          } else {
+            this._startReconnect(fresh, serverId, tabId, attempt + 1)
+          }
+        }
+      }, delay)
+
+      // Track timer for cancellation on manual close
+      _reconnectTimers.set(tabId, timerId)
+    },
+
+    _cancelReconnect(tab) {
+      if (tab.sessionId) {
+        _reconnectCancel.add(tab.sessionId)
+      }
+      if (tab._reconnectInfo) {
+        const timerId = _reconnectTimers.get(tab.id)
+        if (timerId) { clearTimeout(timerId); _reconnectTimers.delete(tab.id) }
+        tab._reconnectInfo = undefined
+        tab.status = 'disconnected'
+      }
     },
 
     async openServer(profile) {
-      _log('openServer', { id: profile.id, name: profile.name, host: profile.host })
+      log.info('openServer', { id: profile.id, name: profile.name, host: profile.host })
       const existing = this.servers.find(s => s.id === profile.id)
       if (existing) {
         this.activeServerId = profile.id
@@ -62,13 +149,13 @@ export const useServerStore = defineStore('servers', {
       }
       this.servers.push(entry)
       this.activeServerId = profile.id
-      _log('entry added, connecting overview tab')
+      log.info('entry added, connecting overview tab')
 
       const connStore = useConnectionStore()
       const toast = useToast()
       try {
         const sessionId = await connStore.connect(profile)
-        _log('overview got sessionId, waiting for connection', sessionId)
+        log.info('overview got sessionId, waiting for connection', sessionId)
         const srv = this.servers.find(s => s.id === profile.id)
         srv.tabs[0].sessionId = sessionId
         srv.tabs[0].status = 'connected'
@@ -114,7 +201,7 @@ export const useServerStore = defineStore('servers', {
         }, trafficMs)
         }
       } catch (e) {
-        _log('overview connect FAILED', e?.message || e)
+        log.error('overview connect FAILED', e?.message || e)
         const srv = this.servers.find(s => s.id === profile.id)
         if (srv) srv.tabs[0].status = 'error'
         toast.error(`Failed to connect: ${e}`)
@@ -129,6 +216,7 @@ export const useServerStore = defineStore('servers', {
       clearInterval(server._pingTimer)
       clearInterval(server._trafficTimer)
       for (const tab of server.tabs) {
+        this._cancelReconnect(tab)
         if (tab.sessionId) connStore.disconnect(tab.sessionId).catch(() => {})
       }
       this.servers.splice(idx, 1)
@@ -157,19 +245,19 @@ export const useServerStore = defineStore('servers', {
       server.tabs.push(tab)
       server.previousActiveTabId = server.activeTabId
       server.activeTabId = id
-      _log('terminal tab added, connecting', { tabId: id })
+      log.info('terminal tab added, connecting', { tabId: id })
 
       const toast = useToast()
       try {
         const sessionId = await connStore.connect(profile)
-        _log('terminal got sessionId, waiting for connection', sessionId)
+        log.info('terminal got sessionId, waiting for connection', sessionId)
         const rTab = server.tabs.find(t => t.id === id)
         if (rTab) {
           rTab.sessionId = sessionId
           rTab.status = 'connected'
         }
       } catch (e) {
-        _log('terminal connect FAILED', e?.message || e)
+        log.error('terminal connect FAILED', e?.message || e)
         const rTab = server.tabs.find(t => t.id === id)
         if (rTab) rTab.status = 'error'
         toast.error(`Failed to open terminal: ${e}`)
@@ -190,19 +278,19 @@ export const useServerStore = defineStore('servers', {
       server.tabs.push(tab)
       server.previousActiveTabId = server.activeTabId
       server.activeTabId = id
-      _log('filemanager tab added, connecting', { tabId: id })
+      log.info('filemanager tab added, connecting', { tabId: id })
 
       const toast = useToast()
       try {
         const sessionId = await connStore.connect(profile)
-        _log('filemanager got sessionId', sessionId)
+        log.info('filemanager got sessionId', sessionId)
         const rTab = server.tabs.find(t => t.id === id)
         if (rTab) {
           rTab.sessionId = sessionId
           rTab.status = 'connected'
         }
       } catch (e) {
-        _log('filemanager connect FAILED', e?.message || e)
+        log.error('filemanager connect FAILED', e?.message || e)
         const rTab = server.tabs.find(t => t.id === id)
         if (rTab) rTab.status = 'error'
         toast.error(`Failed to open file manager: ${e}`)
@@ -216,6 +304,7 @@ export const useServerStore = defineStore('servers', {
       if (idx < 0) return
       const tab = server.tabs[idx]
       if (tab.type === 'overview') return
+      this._cancelReconnect(tab)
       const connStore = useConnectionStore()
       if (tab.sessionId) connStore.disconnect(tab.sessionId).catch(() => {})
       server.tabs.splice(idx, 1)

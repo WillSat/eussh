@@ -34,7 +34,7 @@ const {
   swapUsedMib, swapTotalMib, swapPercent,
   diskTotal, diskUsed, diskPercent,
   allIps, geoLocation,
-  staticLoading, firstLoadDone,
+  staticLoading, firstLoadDone, dataStale,
 } = data
 
 // ── Accent / Theme ─────────────────────────────────────────────────
@@ -142,6 +142,10 @@ const hasIps    = computed(() => allIps.value.length > 0)
               <span v-if="osInfo" class="text-xs" :style="{ color: textSec }">{{ osInfo }}</span>
               <span v-if="kernelVer" class="text-xs font-mono" :style="{ color: textTer }">{{ kernelVer }}</span>
               <span v-if="staticLoading" class="text-[10px] animate-pulse" :style="{ color: textTer }">{{ t('overview.loading') }}</span>
+            <span v-if="dataStale && !staticLoading" class="text-[10px] flex items-center gap-1" style="color: #e6a817">
+              <span class="inline-block w-1.5 h-1.5 rounded-full" style="background: #e6a817"></span>
+              {{ t('overview.dataStale') }}
+            </span>
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">

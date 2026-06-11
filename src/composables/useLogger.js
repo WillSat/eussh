@@ -9,7 +9,12 @@ const state = reactive({
 
 const errorCount = ref(0)
 
+// Logging starts enabled so startup logs are captured.
+// Disabled after settings load if showDebug is false.
+let loggingEnabled = true
+
 function add(level, source, message, data) {
+  if (!loggingEnabled) return
   const entry = {
     id: ++errorCount.value,
     timestamp: new Date().toISOString().slice(11, 23),
@@ -37,6 +42,14 @@ function add(level, source, message, data) {
   }
 }
 
+function setLoggingEnabled(enabled) {
+  loggingEnabled = enabled
+  if (!enabled) {
+    state.entries.splice(0)
+    state.showPanel = false
+  }
+}
+
 export function useLogger(source) {
   function debug(msg, data) { add('debug', source, msg, data) }
   function info(msg, data)  { add('info', source, msg, data) }
@@ -58,5 +71,5 @@ export function useLogger(source) {
 
   function togglePanel() { state.showPanel = !state.showPanel }
 
-  return { debug, info, warn, error, trace, logState: state, togglePanel }
+  return { debug, info, warn, error, trace, logState: state, togglePanel, setLoggingEnabled }
 }

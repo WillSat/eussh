@@ -8,9 +8,10 @@ const { t } = useI18n()
 const props = defineProps({
   visible: { type: Boolean, default: false },
   connection: { type: Object, default: null },
+  showDelete: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['close', 'saved'])
+const emit = defineEmits(['close', 'saved', 'delete'])
 
 const form = reactive({
   name: '',
@@ -166,15 +167,35 @@ function onSubmit() {
         </div>
       </template>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" @click="emit('close')"
+      <!-- Keepalive -->
+      <div>
+        <label class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{{ t('connection.keepalive') }}</label>
+        <div class="flex items-center gap-1.5">
+          <input v-model.number="form.keepaliveSeconds" type="number" min="0" max="3600" placeholder="0"
+            class="w-16 px-2 py-1 text-xs text-right rounded-lg border border-[var(--color-border)]
+              bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-mono
+              focus:outline-none focus:border-[var(--color-accent)] transition-all" />
+          <span class="text-[10px] text-[var(--color-text-tertiary)]">s (0 = {{ t('connection.keepaliveOff') }})</span>
+        </div>
+      </div>
+
+      <div class="flex justify-between gap-2 pt-2">
+        <button v-if="showDelete && connection?.id" type="button"
+          @click="emit('delete', connection.id)"
           class="px-4 py-1.5 text-xs font-medium rounded-[var(--radius-sm)]
-            text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
-        >{{ t('connection.cancel') }}</button>
-        <button type="submit"
-          class="px-4 py-1.5 text-xs font-medium rounded-[var(--radius-sm)]
-            bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] transition-colors"
-        >{{ t(connection?.id ? 'connection.save' : 'connection.add') }}</button>
+            text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
+        >{{ t('connection.delete') }}</button>
+        <span v-else />
+        <div class="flex gap-2">
+          <button type="button" @click="emit('close')"
+            class="px-4 py-1.5 text-xs font-medium rounded-[var(--radius-sm)]
+              text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
+          >{{ t('connection.cancel') }}</button>
+          <button type="submit"
+            class="px-4 py-1.5 text-xs font-medium rounded-[var(--radius-sm)]
+              bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] transition-colors"
+          >{{ t(connection?.id ? 'connection.save' : 'connection.add') }}</button>
+        </div>
       </div>
     </form>
   </Modal>

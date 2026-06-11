@@ -5,10 +5,12 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::task::JoinHandle;
 
 use crate::models::connection::ConnectionProfile;
+use crate::ssh::host_key::HostKeyVerificationManager;
 use crate::ssh::session::SharedSession;
 
 pub struct SshManager {
     sessions: Arc<RwLock<HashMap<String, SshSessionHandle>>>,
+    pub host_key_verification: Arc<HostKeyVerificationManager>,
 }
 
 pub struct SshSessionHandle {
@@ -23,6 +25,7 @@ impl SshManager {
     pub fn new() -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
+            host_key_verification: Arc::new(HostKeyVerificationManager::new()),
         }
     }
 
@@ -33,8 +36,15 @@ impl SshManager {
     ) -> Result<String, String> {
         let session_id = uuid::Uuid::new_v4().to_string();
 
+        let _ = app_handle.emit("debug-event", serde_json::json!({
+            "session_id": session_id,
+            "level": "info",
+            "source": "Manager",
+            "message": format!("Connecting to {}@{}:{} …", profile.username, profile.host, profile.port),
+        }));
+
         let (session, stdout_rx) =
-            crate::ssh::session::SshSession::connect(profile.clone(), app_handle.clone(), session_id.clone())
+            crate::ssh::session::SshSession::connect(profile.clone(), app_handle.clone(), session_id.clone(), self.host_key_verification.clone())
                 .await?;
 
         let shared = session
@@ -53,6 +63,14 @@ impl SshManager {
                 session: shared,
             },
         );
+        let session_count = sessions.len();
+
+        let _ = app_handle.emit("debug-event", serde_json::json!({
+            "session_id": session_id,
+            "level": "info",
+            "source": "Manager",
+            "message": format!("Session registered ({} active)", session_count),
+        }));
 
         let app = app_handle.clone();
         let sid = session_id.clone();
@@ -77,6 +95,7 @@ impl SshManager {
         if let Some(handle) = sessions.remove(session_id) {
             handle.handle.abort();
         }
+        // Note: disconnect debug events are emitted by session.rs spawn
         Ok(())
     }
 

@@ -28,8 +28,13 @@ npx tauri build          # Full production build with frontend embedding → ins
 ```
 App.vue
 └── AppShell.vue
-    ├── TitleBar.vue              — Window title + settings toggle (debug toggle hidden)
-    ├── Sidebar.vue               — Open servers (top) + saved servers (bottom) + ConnectionDialog
+    ├── TitleBar.vue              — Window title + debug toggle
+    ├── ActivityBar.vue           — VS Code-style icon bar (Servers / Batch / Settings)
+    ├── Sidebar.vue               — Thin shell: resize handle + view routing
+    │   └── sidebar/
+    │       ├── ServersView.vue    — Unified connection list with status-colored rows
+    │       ├── BatchView.vue      — Multi-server command execution + per-result copy
+    │       └── SettingsView.vue   — All settings with mini activity bar (General / Appearance / Terminal / Monitoring)
     ├── MainTabBar.vue            — Tab strip: overview / terminal / filemanager
     ├── [Content Area]
     │   ├── WelcomeScreen.vue     — Shown when no server connected
@@ -40,6 +45,7 @@ App.vue
     │       ├── FileListView.vue   — Table: Name, Perms, Owner, Group, Size, Modified
     │       ├── FileIconView.vue   — Grid: icon thumbnails
     │       └── ContextMenu.vue   — Right-click actions
+    ├── HostKeyDialog.vue         — TOFU host key fingerprint confirmation
     └── StatusBar.vue             — Connection status, progress bars, clock
 ```
 
@@ -150,3 +156,41 @@ Bypasses `npm.cmd` and `vite.cmd` batch files. On Windows, `.cmd` files require 
 ## Toolchain
 
 **Rust:** MSVC toolchain (`stable-x86_64-pc-windows-msvc`). All deps are pure Rust — no C compilation needed. `russh` with `ring` backend.
+
+## Sidebar Design Specification
+
+All sidebar views are in `src/components/layout/sidebar/` (3 views: ServersView, BatchView, SettingsView). The `Sidebar.vue` shell handles resize, view routing, and passes `:width` to child views.
+
+### Typography Scale
+
+| Role | Classes |
+|------|---------|
+| Section headers | `text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-tertiary)]` |
+| Item titles (server name) | `text-[14px] leading-tight font-medium text-[var(--color-text-primary)]` |
+| Item subtitles / host | `text-[11px] text-[var(--color-text-secondary)]` |
+| Descriptive hints | `text-[10px] text-[var(--color-text-tertiary)]/40` |
+| Code / monospace | `text-[11px] font-mono text-[var(--color-text-primary)]` |
+| Form labels | `text-[11px] font-medium text-[var(--color-text-secondary)]` |
+| Small badges / counts | `text-[10px] tabular-nums` |
+| Segmented buttons | `text-[12px]` |
+
+### Color Tokens
+
+| Purpose | Classes |
+|---------|---------|
+| Segmented btn active | `bg-[var(--color-accent)] text-white shadow-sm` |
+| Segmented btn inactive | `text-[var(--color-text-tertiary)]/50 hover:text-[var(--color-text-secondary)]` |
+| Connected status bg | `bg-[#34C759]/12` |
+| Reconnecting status bg | `bg-[#FF9500]/12` |
+| Error/disconnected bg | `bg-[#FF3B30]/8` |
+| Primary action btn | `bg-[var(--color-accent)] text-white hover:brightness-110 disabled:opacity-30` |
+| Danger btn | `text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10` |
+
+### Interactive Controls
+(Same as before.)
+
+### Layout Rules
+(Same as before.)
+
+### Component Pattern
+Each view receives `:width` Number prop and self-contained with its own `<script setup>`.

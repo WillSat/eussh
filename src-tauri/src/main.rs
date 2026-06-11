@@ -12,7 +12,7 @@ use commands::{config, connection, file, open};
 fn main() {
     let app_state = AppState {
         config_store: storage::config_store::ConfigStore::new(),
-        ssh_manager: ssh::manager::SshManager::new(),
+        ssh_manager: std::sync::Arc::new(ssh::manager::SshManager::new()),
     };
 
     tauri::Builder::default()
@@ -31,6 +31,8 @@ fn main() {
             connection::server_traffic,
             connection::clipboard_read,
             connection::clipboard_write,
+            connection::confirm_host_key,
+            connection::batch_exec,
             file::file_list,
             file::file_mkdir,
             file::file_remove,

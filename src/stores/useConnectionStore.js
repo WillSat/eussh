@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { invoke } from '@/utils/ipc'
+import { useLogger } from '@/composables/useLogger'
 
-const _log = (...args) => { try { console.log('[ConnStore]', ...args) } catch {} }
+const log = useLogger('ConnStore')
 
 export const useConnectionStore = defineStore('connections', {
   state: () => ({
@@ -41,15 +42,15 @@ export const useConnectionStore = defineStore('connections', {
     },
 
     async connect(profile) {
-      _log('connect', { id: profile.id, host: profile.host })
+      log.info('connect', { id: profile.id, host: profile.host })
       this.connecting.add(profile.id)
       try {
         const sessionId = await invoke('connect', { profile })
-        _log('connect OK, sessionId:', sessionId)
+        log.info('connect OK, sessionId:', sessionId)
         this.connecting.delete(profile.id)
         return sessionId
       } catch (e) {
-        _log('connect FAILED:', e?.message || e)
+        log.error('connect FAILED:', e?.message || e)
         this.connecting.delete(profile.id)
         throw e
       }

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onErrorCaptured, watch, reactive } from 'vue'
 import TitleBar from './TitleBar.vue'
+import ActivityBar from './ActivityBar.vue'
 import Sidebar from './Sidebar.vue'
 import MainTabBar from './MainTabBar.vue'
 import StatusBar from './StatusBar.vue'
@@ -9,8 +10,8 @@ import ServerOverview from '../server/ServerOverview.vue'
 import TerminalContainer from '../terminal/TerminalContainer.vue'
 import FileManager from '../filemanager/FileManager.vue'
 import Toast from '../common/Toast.vue'
-import SettingsPanel from '../settings/SettingsPanel.vue'
 import DebugPanel from './DebugPanel.vue'
+import HostKeyDialog from '../connection/HostKeyDialog.vue'
 import VersionCheck from './VersionCheck.vue'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useServerStore } from '@/stores/useServerStore'
@@ -30,7 +31,8 @@ const settingsStore = useSettingsStore()
 const { init: initTheme } = useTheme()
 const { state: toast, close: closeToast, error: showError } = useToast()
 
-const showSettings = ref(false)
+const activeView = ref('servers')
+const hostKeyDialog = ref(null)
 const vueError = ref(null)
 
 log.info('setup start')
@@ -98,6 +100,12 @@ onMounted(async () => {
     await settingsStore.load()
     log.info('settings loaded', settingsStore.theme)
 
+    // Apply debug logging toggle
+    log.setLoggingEnabled(settingsStore.showDebug)
+    watch(() => settingsStore.showDebug, (val) => {
+      log.setLoggingEnabled(val)
+    })
+
     log.info('initI18n')
     initI18n(settingsStore.language)
 
@@ -120,6 +128,24 @@ onMounted(async () => {
         showError(message)
       }
     })
+
+    log.info('listening for debug-event')
+    await listen('debug-event', (event) => {
+      const { session_id, level, source, message, elapsed_ms } = event.payload
+      const tag = session_id ? `[${session_id.slice(0, 8)}] ${source}` : source
+      const msg = elapsed_ms != null ? `${message} (${elapsed_ms}ms)` : message
+      switch (level) {
+        case 'error': log.error(`[Rust] ${msg}`, { tag }); break
+        case 'warn':  log.warn(`[Rust] ${msg}`, { tag }); break
+        default:      log.info(`[Rust] ${msg}`, { tag }); break
+      }
+    })
+    log.info('listening for host-key-verify')
+    await listen('host-key-verify', (event) => {
+      log.info('host-key-verify', event.payload)
+      hostKeyDialog.value?.show(event.payload)
+    })
+
     log.info('onMounted complete')
   } catch (e) {
     log.error('onMounted crashed', { message: e?.message, stack: e?.stack })
@@ -130,9 +156,10 @@ onMounted(async () => {
 
 <template>
   <div class="app-shell h-screen flex flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
-    <TitleBar v-model:show-settings="showSettings" />
+    <TitleBar />
     <div class="flex flex-1 overflow-hidden min-h-0">
-      <Sidebar />
+      <ActivityBar :active="activeView" @select="activeView = $event" />
+      <Sidebar :view="activeView" @navigate="e => activeView = e.view" />
       <div class="flex flex-col flex-1 overflow-hidden min-w-0">
         <MainTabBar />
         <div class="flex-1 relative min-h-0 bg-[var(--color-bg-primary)]">
@@ -167,9 +194,21 @@ onMounted(async () => {
                 :session-id="tab.sessionId"
                 :is-active="srv.id === serverStore.activeServerId && tab.id === srv.activeTabId"
               />
-              <div v-else class="flex items-center justify-center h-full">
+              <div v-else class="flex flex-col items-center justify-center h-full gap-2">
+                <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
+                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                </p>
                 <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
-                <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
+                <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
+              </div>
+              <!-- Reconnect overlay on terminal -->
+              <div
+                v-if="tab.sessionId && tab.status === 'reconnecting' && tab._reconnectInfo"
+                class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex items-center justify-center z-10 pointer-events-none"
+              >
+                <span class="text-xs font-medium text-[var(--color-accent)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg shadow-sm">
+                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                </span>
               </div>
             </div>
 
@@ -184,9 +223,12 @@ onMounted(async () => {
                 v-if="tab.sessionId"
                 :session-id="tab.sessionId"
               />
-              <div v-else class="flex items-center justify-center h-full">
+              <div v-else class="flex flex-col items-center justify-center h-full gap-2">
+                <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
+                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                </p>
                 <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
-                <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
+                <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
               </div>
             </div>
           </div>
@@ -194,13 +236,13 @@ onMounted(async () => {
       </div>
     </div>
     <StatusBar />
-    <SettingsPanel :visible="showSettings" @close="showSettings = false" />
     <Toast
       :visible="toast.visible"
       :message="toast.message"
       :type="toast.type"
       @close="closeToast"
     />
+    <HostKeyDialog ref="hostKeyDialog" />
     <DebugPanel />
     <VersionCheck />
   </div>
