@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and release'
+        required: true
 
 jobs:
   build:
@@ -30,6 +34,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,11 +66,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "Releasing tag: $TAG"
+
+          # Create release (ignore error if already exists)
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "See [CHANGELOG](https://github.com/WillSat/eussh#%EF%B8%8F-%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97) for details." \
+            --draft=false \
+            || true
+
           for pattern in ${{ matrix.artifact_glob }}; do
             for file in $pattern; do
               if [ -f "$file" ]; then
                 echo "Uploading $file"
-                gh release upload ${{ github.ref_name }} "$file" --clobber
+                gh release upload "$TAG" "$file" --clobber
               fi
             done
           done
