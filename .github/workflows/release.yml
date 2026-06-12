@@ -17,17 +17,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_glob: |
-              src-tauri/target/release/bundle/msi/*.msi
-              src-tauri/target/release/bundle/nsis/*.exe
+            artifact_glob: "src-tauri/target/release/bundle/msi/*.msi src-tauri/target/release/bundle/nsis/*.exe"
           - os: ubuntu-latest
-            artifact_glob: |
-              src-tauri/target/release/bundle/deb/*.deb
-              src-tauri/target/release/bundle/rpm/*.rpm
-              src-tauri/target/release/bundle/appimage/*.AppImage
+            artifact_glob: "src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/appimage/*.AppImage"
           - os: macos-latest
-            artifact_glob: |
-              src-tauri/target/release/bundle/dmg/*.dmg
+            artifact_glob: "src-tauri/target/release/bundle/dmg/*.dmg"
 
     runs-on: ${{ matrix.os }}
 
@@ -76,7 +70,8 @@ jobs:
             --draft=false \
             || true
 
-          for pattern in ${{ matrix.artifact_glob }}; do
+          set -- ${{ matrix.artifact_glob }}
+          for pattern; do
             for file in $pattern; do
               if [ -f "$file" ]; then
                 echo "Uploading $file"
