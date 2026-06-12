@@ -1,20 +1,24 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useI18n } from '@/composables/useI18n'
 import { COLOR_PRESETS } from '@/utils/theme'
 
 const { t, locale, setLocale } = useI18n()
 const settings = useSettingsStore()
-defineProps({ width: Number })
+const emit = defineEmits(['close'])
 
 const sTab = ref('general')
-const sTabs = [
-  { id: 'general',    icon: 'general' },
-  { id: 'appearance', icon: 'appearance' },
-  { id: 'terminal',   icon: 'terminal' },
-  { id: 'monitoring', icon: 'monitoring' },
-]
+const sTabs = computed(() => [
+  { id: 'general',    label: t('settings.general') },
+  { id: 'appearance', label: t('settings.appearance') },
+  { id: 'terminal',   label: t('settings.terminal') },
+  { id: 'monitoring', label: t('settings.monitoring') },
+])
+
+function onKey(e) { if (e.key === 'Escape') emit('close') }
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
 function seg(active) {
   return active
@@ -29,16 +33,21 @@ const langList = ['en','zh-CN']
 function setLang(l) { setLocale(l); settings.language=l; settings.save() }
 </script>
 <template>
-  <div class="flex-1 flex min-h-0">
-    <div class="w-10 shrink-0 flex flex-col items-center gap-0.5 pt-3 border-r border-[var(--color-border)] bg-[var(--color-bg-primary)]/30">
-      <button v-for="st in sTabs" :key="st.id" @click="sTab=st.id"
-        :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-all', sTab===st.id ? 'text-[var(--color-accent)] bg-[var(--color-accent)]/10' : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]']">
-        <svg v-if="st.icon==='general'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <svg v-else-if="st.icon==='appearance'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20"/></svg>
-        <svg v-else-if="st.icon==='terminal'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-        <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  <div class="absolute inset-0 z-50 bg-[var(--color-bg-primary)] flex flex-col">
+    <!-- Header bar -->
+    <div class="shrink-0 flex items-center justify-between px-4 h-10 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] select-none">
+      <span class="text-[12px] font-semibold text-[var(--color-text-primary)]">{{ t('settings.title') }}</span>
+      <button @click="emit('close')"
+        class="w-7 h-7 flex items-center justify-center rounded-md text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
+    <!-- Tab bar -->
+    <div class="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/30">
+      <button v-for="st in sTabs" :key="st.id" @click="sTab=st.id"
+        :class="['px-3 py-1.5 text-[12px] font-medium rounded transition-all', sTab===st.id ? 'text-[var(--color-accent)] bg-[var(--color-accent)]/10' : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]']">{{ st.label }}</button>
+    </div>
+    <!-- Body -->
     <div class="flex-1 overflow-y-auto">
 
       <!-- GENERAL -->
@@ -63,7 +72,7 @@ function setLang(l) { setLocale(l); settings.language=l; settings.save() }
           <p class="text-[10px] text-[var(--color-text-tertiary)]/40 mt-0.5">{{ t('settingsDesc.showDebug') }}</p>
         </div>
         <div class="pt-3 mt-1 border-t border-[var(--color-border)] space-y-1">
-          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.1</span></div>
+          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.2</span></div>
           <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">License</span><span class="text-[var(--color-text-primary)]">MIT</span></div>
         </div>
       </div>
@@ -176,6 +185,15 @@ function setLang(l) { setLocale(l); settings.language=l; settings.save() }
               <span :class="['inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-200', settings.showTraffic?'translate-x-3':'translate-x-0']" /></button>
           </div>
           <p class="text-[10px] text-[var(--color-text-tertiary)]/40 mt-0.5">{{ t('settingsDesc.traffic') }}</p>
+        </div>
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-medium text-[var(--color-text-secondary)]">{{ t('settings.showGeoLookup') }}</span>
+            <button role="switch" :aria-checked="settings.showGeoLookup" @click="settings.showGeoLookup=!settings.showGeoLookup; settings.save()"
+              :class="['inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200', settings.showGeoLookup?'bg-[var(--color-accent)]':'bg-[var(--color-bg-tertiary)]']">
+              <span :class="['inline-block h-3 w-3 rounded-full bg-white shadow transition-transform duration-200', settings.showGeoLookup?'translate-x-3':'translate-x-0']" /></button>
+          </div>
+          <p class="text-[10px] text-[var(--color-text-tertiary)]/40 mt-0.5">{{ t('settingsDesc.geoLookup') }}</p>
         </div>
       </div>
 

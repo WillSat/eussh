@@ -3,7 +3,6 @@ import { ref, onBeforeUnmount } from 'vue'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import ServersView from './sidebar/ServersView.vue'
 import BatchView from './sidebar/BatchView.vue'
-import SettingsView from './sidebar/SettingsView.vue'
 
 const props = defineProps({ view: { type: String, default: 'servers' } })
 const emit = defineEmits(['navigate'])
@@ -21,7 +20,6 @@ onBeforeUnmount(()=>{ document.removeEventListener('mousemove',onMove); document
   <div class="shrink-0 flex flex-col h-full select-none relative bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)]" :style="{width:W+'px'}">
     <ServersView v-if="view==='servers'" :width="W" />
     <BatchView v-else-if="view==='batch'" :width="W" />
-    <SettingsView v-else-if="view==='settings'" :width="W" />
     <div @mousedown="onDown" :class="['absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-20 transition-colors',dragging?'bg-[var(--color-accent)]':'bg-transparent hover:bg-[var(--color-accent)]/30']" />
   </div>
 </template>

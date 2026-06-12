@@ -67,11 +67,18 @@ const notification = computed(() => {
 })
 
 let completeTimer = null
+let unlistenSftp = null
+
+onBeforeUnmount(() => {
+  clearInterval(clockTimer)
+  if (completeTimer) clearTimeout(completeTimer)
+  unlistenSftp?.()
+})
 
 onMounted(async () => {
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
 
-  const unlistenSftp = await listen('sftp-progress', (e) => {
+  unlistenSftp = await listen('sftp-progress', (e) => {
     const { operation, path, bytes_transferred, total_bytes } = e.payload
     const name = (path || '').split('/').pop() || path || '?'
     const arrow = operation === 'upload' ? '↑' : '↓'
@@ -92,15 +99,6 @@ onMounted(async () => {
       progress.value = { arrow, name, pct: 0, label: `${arrow} ${name} ${fmtBytes(bytes_transferred)}`, percentage: 0, determinate: false }
     }
   })
-
-  onBeforeUnmount(() => {
-    unlistenSftp?.()
-  })
-})
-
-onBeforeUnmount(() => {
-  clearInterval(clockTimer)
-  if (completeTimer) clearTimeout(completeTimer)
 })
 
 const isAccent = computed(() => settingsStore.statusbarStyle === 'accent')

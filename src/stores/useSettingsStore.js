@@ -11,14 +11,15 @@ export const useSettingsStore = defineStore('settings', {
     scrollback: 10000,
     sidebarWidth: 260,
     terminalColorPreset: 'default-dark',
-    monitorRefreshSecs: 2,
-    pingIntervalSecs: 15,
+    monitorRefreshSecs: 10,
+    pingIntervalSecs: 5,
     accentColor: '#007AFF',
     titlebarStyle: 'macos',
     statusbarStyle: 'default',
     showTraffic: true,
     checkUpdates: true,
     showDebug: false,
+    showGeoLookup: false,
   }),
 
   getters: {
@@ -51,6 +52,7 @@ export const useSettingsStore = defineStore('settings', {
           if (s.show_traffic !== undefined) this.showTraffic = s.show_traffic
           if (s.check_updates !== undefined) this.checkUpdates = s.check_updates
           if (s.show_debug !== undefined) this.showDebug = s.show_debug
+          if (s.show_geo_lookup !== undefined) this.showGeoLookup = s.show_geo_lookup
         }
         try { localStorage.setItem('eussh-theme', this.theme) } catch {}
       } catch (_) {}
@@ -77,6 +79,7 @@ export const useSettingsStore = defineStore('settings', {
               show_traffic: this.showTraffic,
               check_updates: this.checkUpdates,
               show_debug: this.showDebug,
+              show_geo_lookup: this.showGeoLookup,
             },
           },
         })

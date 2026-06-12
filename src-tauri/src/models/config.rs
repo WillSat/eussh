@@ -54,6 +54,8 @@ pub struct AppSettings {
     pub check_updates: bool,
     #[serde(default = "default_show_debug")]
     pub show_debug: bool,
+    #[serde(default = "default_show_geo_lookup")]
+    pub show_geo_lookup: bool,
 }
 
 impl Default for AppSettings {
@@ -73,6 +75,7 @@ impl Default for AppSettings {
             show_traffic: default_show_traffic(),
             check_updates: default_check_updates(),
             show_debug: default_show_debug(),
+            show_geo_lookup: default_show_geo_lookup(),
         }
     }
 }
@@ -83,11 +86,12 @@ fn default_cursor_style() -> String { "bar".into() }
 fn default_scrollback() -> u32 { 10000 }
 fn default_sidebar_width() -> u16 { 260 }
 fn default_color_preset() -> String { "default-dark".into() }
-fn default_monitor_refresh() -> u32 { 3 }
-fn default_ping_interval() -> u32 { 15 }
+fn default_monitor_refresh() -> u32 { 10 }
+fn default_ping_interval() -> u32 { 5 }
 fn default_accent_color() -> String { "#007AFF".into() }
 fn default_titlebar_style() -> String { "macos".into() }
 fn default_statusbar_style() -> String { "default".into() }
 fn default_show_traffic() -> bool { true }
 fn default_check_updates() -> bool { true }
 fn default_show_debug() -> bool { false }
+fn default_show_geo_lookup() -> bool { false }

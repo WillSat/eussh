@@ -1,6 +1,7 @@
 use crate::state::AppState;
 use russh::{Channel, ChannelMsg};
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use tauri::{Emitter, State};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -102,6 +103,7 @@ pub async fn file_remove(
     path: String,
     is_dir: bool,
 ) -> Result<(), String> {
+    ensure_safe_remote_path(&path, "remove")?;
     let cmd = if is_dir {
         format!("rm -rf {}", shell_escape(&path))
     } else {
@@ -118,6 +120,8 @@ pub async fn file_rename(
     old_path: String,
     new_path: String,
 ) -> Result<(), String> {
+    ensure_safe_remote_path(&old_path, "rename")?;
+    ensure_safe_remote_path(&new_path, "rename")?;
     let cmd = format!("mv {} {}", shell_escape(&old_path), shell_escape(&new_path));
     state.ssh_manager.exec_command(&session_id, &cmd).await?;
     Ok(())
@@ -130,6 +134,8 @@ pub async fn file_copy(
     src: String,
     dst: String,
 ) -> Result<(), String> {
+    ensure_safe_remote_path(&src, "copy")?;
+    ensure_safe_remote_path(&dst, "copy")?;
     let cmd = format!("cp -r {} {}", shell_escape(&src), shell_escape(&dst));
     state.ssh_manager.exec_command(&session_id, &cmd).await?;
     Ok(())
@@ -247,12 +253,53 @@ pub async fn file_write(
 }
 
 fn shell_escape(s: &str) -> String {
-    if s.is_empty() || s == "/" {
-        return s.to_string();
+    if s.is_empty() {
+        return "''".to_string();
+    }
+    if s == "/" {
+        return "/".to_string();
     }
     // Replace single quotes with '\'' and wrap in single quotes
     let escaped = s.replace('\'', "'\\''");
     format!("'{}'", escaped)
+}
+
+fn ensure_safe_remote_path(path: &str, operation: &str) -> Result<(), String> {
+    let normalized = normalize_remote_path(path);
+    if normalized.is_empty() || normalized == "/" {
+        return Err(format!("Refusing to {} root or empty path", operation));
+    }
+    Ok(())
+}
+
+/// Collapse redundant slashes and strip trailing slashes so that
+/// `//`, `///`, `/./`, and `/dir//` all resolve to their canonical form.
+fn normalize_remote_path(path: &str) -> String {
+    let mut result = String::with_capacity(path.len());
+    for (i, ch) in path.chars().enumerate() {
+        if ch == '/' {
+            if i > 0 && result.ends_with('/') {
+                // collapse "//" → "/"
+                continue;
+            }
+        }
+        result.push(ch);
+    }
+    // Strip trailing "/" unless it's the root "/" itself
+    if result.len() > 1 && result.ends_with('/') {
+        result.pop();
+    }
+    result
+}
+
+fn validate_chmod_mode(mode: &str) -> Result<(), String> {
+    let m = mode.trim();
+    let valid_len = m.len() == 3 || m.len() == 4;
+    if valid_len && m.bytes().all(|b| (b'0'..=b'7').contains(&b)) {
+        Ok(())
+    } else {
+        Err("Permissions must be an octal mode like 644 or 0755".to_string())
+    }
 }
 
 #[tauri::command]
@@ -313,7 +360,9 @@ pub async fn file_chmod(
     path: String,
     mode: String,
 ) -> Result<(), String> {
-    let cmd = format!("chmod {} {}", mode, shell_escape(&path));
+    validate_chmod_mode(&mode)?;
+    ensure_safe_remote_path(&path, "chmod")?;
+    let cmd = format!("chmod {} {}", mode.trim(), shell_escape(&path));
     state.ssh_manager.exec_command(&session_id, &cmd).await?;
     Ok(())
 }
@@ -358,14 +407,14 @@ async fn upload_file_raw(
     local_path: &str,
     remote_dir: &str,
 ) -> Result<(), String> {
-    let data = std::fs::read(local_path).map_err(|e| format!("Cannot read: {}", e))?;
     let name = std::path::Path::new(local_path).file_name().and_then(|n| n.to_str()).unwrap_or("uploaded");
     let remote_path = if remote_dir == "/" {
         format!("/{}", name)
     } else {
         format!("{}/{}", remote_dir, name)
     };
-    let total = data.len();
+    let mut file = std::fs::File::open(local_path).map_err(|e| format!("Cannot read: {}", e))?;
+    let total = file.metadata().map_err(|e| format!("Cannot stat: {}", e))?.len() as usize;
     let shared = state.ssh_manager.get_session(session_id).await?;
     let ch: Channel<russh::client::Msg> = {
         let sess = shared.lock().await;
@@ -376,9 +425,15 @@ async fn upload_file_raw(
     let chunk_size = 32768;
     let sid = session_id.to_string();
     let app = app_handle.clone();
-    for (i, chunk) in data.chunks(chunk_size).enumerate() {
-        ch.data(chunk).await.map_err(|e| format!("Write: {}", e))?;
-        let transferred = ((i + 1) * chunk_size).min(total);
+    let mut transferred = 0usize;
+    let mut buffer = vec![0u8; chunk_size];
+    loop {
+        let n = file.read(&mut buffer).map_err(|e| format!("Read: {}", e))?;
+        if n == 0 {
+            break;
+        }
+        ch.data(&buffer[..n]).await.map_err(|e| format!("Write: {}", e))?;
+        transferred = (transferred + n).min(total);
         let _ = app.emit("sftp-progress", serde_json::json!({
             "session_id": sid, "operation": "upload", "path": name,
             "bytes_transferred": transferred, "total_bytes": total,

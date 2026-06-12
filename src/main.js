@@ -3,7 +3,13 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import './assets/css/main.css'
 
-document.addEventListener('contextmenu', e => e.preventDefault())
+// Disable browser context menu in the app container only (not in devtools/overlays)
+document.getElementById('app')?.addEventListener('contextmenu', e => {
+  // Allow right-click in input fields and textareas
+  const tag = e.target?.tagName?.toLowerCase()
+  if (tag === 'input' || tag === 'textarea') return
+  e.preventDefault()
+})
 
 const app = createApp(App)
 const pinia = createPinia()

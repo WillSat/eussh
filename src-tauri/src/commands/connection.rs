@@ -3,6 +3,7 @@ use tauri::{Emitter, State};
 use crate::state::AppState;
 use crate::models::connection::ConnectionProfile;
 use russh::ChannelMsg;
+use tokio::time::{timeout, Duration};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct TrafficStats {
@@ -61,6 +62,13 @@ pub async fn ping(
     app_handle: tauri::AppHandle,
     session_id: String,
 ) -> Result<(), String> {
+    // Rate limit: skip if pinged less than 2s ago
+    if let Err(e) = state.ssh_manager.try_claim_ping(&session_id).await {
+        if e == "rate-limited" {
+            return Ok(()); // silently skip duplicate pings
+        }
+        return Err(e);
+    }
     // Dedicated ping: opens its own SSH channel directly, bypassing the exec queue.
     // Session lock is released immediately after channel open so concurrent operations
     // (other pings, file transfers, exec commands) are never blocked.
@@ -76,13 +84,15 @@ pub async fn ping(
         .await
         .map_err(|e| format!("ping exec: {}", e))?;
     // Drain output until channel closes
-    loop {
+    timeout(Duration::from_secs(5), async {
+        loop {
         match ch.wait().await {
             Some(ChannelMsg::Data { .. }) => {}
             Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => break,
             _ => {}
         }
-    }
+        }
+    }).await.map_err(|_| "ping timed out after 5s".to_string())?;
     let elapsed = t0.elapsed().as_millis();
     if elapsed > 500 {
         let _ = app_handle.emit("debug-event", serde_json::json!({
@@ -146,6 +156,13 @@ pub async fn batch_exec(
     session_ids: Vec<String>,
     command: String,
 ) -> Result<Vec<BatchExecResult>, String> {
+    if session_ids.len() > 50 {
+        return Err("Batch execution is limited to 50 sessions".to_string());
+    }
+    if command.trim().is_empty() {
+        return Err("Command cannot be empty".to_string());
+    }
+
     let mut handles = Vec::new();
     for sid in &session_ids {
         let ssh = state.ssh_manager.clone();

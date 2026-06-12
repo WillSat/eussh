@@ -1,18 +1,21 @@
 <script setup>
-import { ref, onMounted, onErrorCaptured, watch, reactive } from 'vue'
+import { ref, onMounted, onErrorCaptured, watch, reactive, defineAsyncComponent } from 'vue'
 import TitleBar from './TitleBar.vue'
 import ActivityBar from './ActivityBar.vue'
 import Sidebar from './Sidebar.vue'
 import MainTabBar from './MainTabBar.vue'
 import StatusBar from './StatusBar.vue'
 import WelcomeScreen from './WelcomeScreen.vue'
-import ServerOverview from '../server/ServerOverview.vue'
-import TerminalContainer from '../terminal/TerminalContainer.vue'
-import FileManager from '../filemanager/FileManager.vue'
 import Toast from '../common/Toast.vue'
 import DebugPanel from './DebugPanel.vue'
 import HostKeyDialog from '../connection/HostKeyDialog.vue'
 import VersionCheck from './VersionCheck.vue'
+import SettingsOverlay from './sidebar/SettingsView.vue'
+
+// Heavy components loaded on demand to reduce initial bundle size
+const ServerOverview = defineAsyncComponent(() => import('../server/ServerOverview.vue'))
+const TerminalContainer = defineAsyncComponent(() => import('../terminal/TerminalContainer.vue'))
+const FileManager = defineAsyncComponent(() => import('../filemanager/FileManager.vue'))
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { useServerStore } from '@/stores/useServerStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -32,10 +35,20 @@ const { init: initTheme } = useTheme()
 const { state: toast, close: closeToast, error: showError } = useToast()
 
 const activeView = ref('servers')
+const showSettingsOverlay = ref(false)
 const hostKeyDialog = ref(null)
 const vueError = ref(null)
 
 log.info('setup start')
+
+function handleActivitySelect(id) {
+  if (id === 'settings') {
+    showSettingsOverlay.value = true
+  } else {
+    showSettingsOverlay.value = false
+    activeView.value = id
+  }
+}
 
 function getOverviewSessionId(srv) {
   const overview = srv?.tabs?.find(t => t.type === 'overview')
@@ -158,81 +171,84 @@ onMounted(async () => {
   <div class="app-shell h-screen flex flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
     <TitleBar />
     <div class="flex flex-1 overflow-hidden min-h-0">
-      <ActivityBar :active="activeView" @select="activeView = $event" />
-      <Sidebar :view="activeView" @navigate="e => activeView = e.view" />
-      <div class="flex flex-col flex-1 overflow-hidden min-w-0">
-        <MainTabBar />
-        <div class="flex-1 relative min-h-0 bg-[var(--color-bg-primary)]">
-          <WelcomeScreen v-if="serverStore.servers.length === 0" />
-          <!-- Render all servers, keep them alive, only show the active one -->
-          <div
-            v-for="srv in serverStore.servers"
-            :key="srv.id"
-            v-show="srv.id === serverStore.activeServerId"
-            class="absolute inset-0"
-          >
-            <!-- Overview pane -->
+      <ActivityBar :active="showSettingsOverlay ? 'settings' : activeView" @select="handleActivitySelect" />
+      <div class="flex flex-1 overflow-hidden min-h-0 relative">
+        <Sidebar :view="activeView" @navigate="e => activeView = e.view" />
+        <div class="flex flex-col flex-1 overflow-hidden min-w-0">
+          <MainTabBar />
+          <div class="flex-1 relative min-h-0 bg-[var(--color-bg-primary)]">
+            <WelcomeScreen v-if="serverStore.servers.length === 0" />
+            <!-- Render all servers, keep them alive, only show the active one -->
             <div
-              :class="['absolute inset-0', paneClasses(srv, 'overview')]"
-              @animationend="handleAnimationEnd"
+              v-for="srv in serverStore.servers"
+              :key="srv.id"
+              v-show="srv.id === serverStore.activeServerId"
+              class="absolute inset-0"
             >
-              <ServerOverview
-                :server-id="srv.id"
-                :session-id="getOverviewSessionId(srv)"
-                :host="srv.host"
-              />
-            </div>
-            <!-- Terminal panes -->
-            <div
-              v-for="tab in srv.tabs.filter(t => t.type === 'terminal')"
-              :key="tab.id"
-              :class="['absolute inset-0', paneClasses(srv, tab.id)]"
-              @animationend="handleAnimationEnd"
-            >
-              <TerminalContainer
-                v-if="tab.sessionId"
-                :session-id="tab.sessionId"
-                :is-active="srv.id === serverStore.activeServerId && tab.id === srv.activeTabId"
-              />
-              <div v-else class="flex flex-col items-center justify-center h-full gap-2">
-                <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
-                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
-                </p>
-                <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
-                <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
-              </div>
-              <!-- Reconnect overlay on terminal -->
+              <!-- Overview pane -->
               <div
-                v-if="tab.sessionId && tab.status === 'reconnecting' && tab._reconnectInfo"
-                class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex items-center justify-center z-10 pointer-events-none"
+                :class="['absolute inset-0', paneClasses(srv, 'overview')]"
+                @animationend="handleAnimationEnd"
               >
-                <span class="text-xs font-medium text-[var(--color-accent)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg shadow-sm">
-                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
-                </span>
+                <ServerOverview
+                  :server-id="srv.id"
+                  :session-id="getOverviewSessionId(srv)"
+                  :host="srv.host"
+                />
               </div>
-            </div>
+              <!-- Terminal panes -->
+              <div
+                v-for="tab in srv.tabs.filter(t => t.type === 'terminal')"
+                :key="tab.id"
+                :class="['absolute inset-0', paneClasses(srv, tab.id)]"
+                @animationend="handleAnimationEnd"
+              >
+                <TerminalContainer
+                  v-if="tab.sessionId"
+                  :session-id="tab.sessionId"
+                  :is-active="srv.id === serverStore.activeServerId && tab.id === srv.activeTabId"
+                />
+                <div v-else class="flex flex-col items-center justify-center h-full gap-2">
+                  <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
+                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                  </p>
+                  <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
+                  <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
+                </div>
+                <!-- Reconnect overlay on terminal -->
+                <div
+                  v-if="tab.sessionId && tab.status === 'reconnecting' && tab._reconnectInfo"
+                  class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex items-center justify-center z-10 pointer-events-none"
+                >
+                  <span class="text-xs font-medium text-[var(--color-accent)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg shadow-sm">
+                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                  </span>
+                </div>
+              </div>
 
-            <!-- File Manager panes -->
-            <div
-              v-for="tab in srv.tabs.filter(t => t.type === 'filemanager')"
-              :key="tab.id"
-              :class="['absolute inset-0', paneClasses(srv, tab.id)]"
-              @animationend="handleAnimationEnd"
-            >
-              <FileManager
-                v-if="tab.sessionId"
-                :session-id="tab.sessionId"
-              />
-              <div v-else class="flex flex-col items-center justify-center h-full gap-2">
-                <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
-                  {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
-                </p>
-                <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
-                <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
+              <!-- File Manager panes -->
+              <div
+                v-for="tab in srv.tabs.filter(t => t.type === 'filemanager')"
+                :key="tab.id"
+                :class="['absolute inset-0', paneClasses(srv, tab.id)]"
+                @animationend="handleAnimationEnd"
+              >
+                <FileManager
+                  v-if="tab.sessionId"
+                  :session-id="tab.sessionId"
+                />
+                <div v-else class="flex flex-col items-center justify-center h-full gap-2">
+                  <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
+                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                  </p>
+                  <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
+                  <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
+        <SettingsOverlay v-if="showSettingsOverlay" @close="showSettingsOverlay = false" />
       </div>
     </div>
     <StatusBar />

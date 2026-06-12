@@ -38,21 +38,30 @@ const chmodMode = ref('')
 const renameName = ref('')
 const dragOver = ref(false)
 
+// Cleanup references declared at top level so onBeforeUnmount always fires
+let unlistenSftp = null
+let unlistenDrag = null
+
+onBeforeUnmount(() => {
+  unlistenSftp?.()
+  unlistenDrag?.()
+  window.removeEventListener('resize', hideContextMenu)
+})
+
 onMounted(async () => {
   await fm.loadDir(props.sessionId, currentDir.value)
-  const unlisten = await listen('sftp-progress', (e) => {
+  unlistenSftp = await listen('sftp-progress', (e) => {
     if (e.payload.session_id === props.sessionId) {
       if (e.payload.total_bytes > 0 && e.payload.bytes_transferred >= e.payload.total_bytes) {
         setTimeout(() => fm.refresh(props.sessionId), 500)
       }
     }
   })
-  onBeforeUnmount(() => unlisten?.())
 
   // Drag-drop from local filesystem
   try {
     const webview = getCurrentWebview()
-    const unlistenDrag = await webview.onDragDropEvent((event) => {
+    unlistenDrag = await webview.onDragDropEvent((event) => {
       if (event.payload.type === 'enter') { dragOver.value = true }
       else if (event.payload.type === 'leave') { dragOver.value = false }
       else if (event.payload.type === 'drop') {
@@ -60,11 +69,11 @@ onMounted(async () => {
         handleDrop(event.payload.paths || [])
       }
     })
-    onBeforeUnmount(() => unlistenDrag?.())
-  } catch {}
+  } catch (e) {
+    console.warn('FileManager: drag-drop registration failed', e)
+  }
 
   window.addEventListener('resize', hideContextMenu)
-  onBeforeUnmount(() => window.removeEventListener('resize', hideContextMenu))
 })
 
 async function handleDrop(paths) {

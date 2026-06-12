@@ -85,15 +85,28 @@ export function useServerData(sessionIdRef) {
   }
 
   // ── Client-side geo lookup (replaces slow SSH curls) ─────────────
+  function isPrivateIpv4(ip) {
+    const parts = ip.split('.').map(Number)
+    if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return true
+    const [a, b] = parts
+    return a === 10 ||
+      a === 127 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254)
+  }
+
   async function fetchGeoLocation() {
+    if (!settings.showGeoLookup) {
+      geoLocation.value = null
+      if (staticCache) staticCache.geoLocation = null
+      return
+    }
+
     const ips = allIps.value
     if (!ips.length) return
     // Find first public IPv4 (skip loopback, private, link-local)
-    const publicIp = ips.find(ip =>
-      !ip.startsWith('127.') && !ip.startsWith('10.') &&
-      !ip.startsWith('172.') && !ip.startsWith('192.168.') &&
-      ip.includes('.') && !ip.includes(':')
-    )
+    const publicIp = ips.find(ip => ip.includes('.') && !ip.includes(':') && !isPrivateIpv4(ip))
     if (!publicIp) return
     try {
       const res = await fetch(`http://ip-api.com/json/${publicIp}?fields=country,city,lat,lon`)
@@ -296,6 +309,13 @@ export function useServerData(sessionIdRef) {
   function stopPolling() { clearInterval(timer); timer = null }
 
   watch(sessionIdRef, (sid) => { if (sid && !disposed) startPolling(); else if (!sid) stopPolling() }, { immediate: true })
+  watch(() => settings.showGeoLookup, (enabled) => {
+    if (enabled) fetchGeoLocation()
+    else {
+      geoLocation.value = null
+      if (staticCache) staticCache.geoLocation = null
+    }
+  })
   onBeforeUnmount(() => { disposed = true; stopPolling(); staticCache = null })
 
   return {

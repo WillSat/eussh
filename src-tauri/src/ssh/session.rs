@@ -10,6 +10,9 @@ use tokio::sync::{mpsc, Mutex, Semaphore};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
+const EXEC_TIMEOUT: Duration = Duration::from_secs(30);
+const READ_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+
 use crate::models::connection::{AuthMethod, ConnectionProfile};
 use crate::ssh::host_key::HostKeyVerificationManager;
 
@@ -74,8 +77,8 @@ impl Handler for ClientHandler {
             }));
 
             // Wait for user response; treat cancellation as rejection
-            match rx.await {
-                Ok(true) => {
+            match timeout(Duration::from_secs(60), rx).await {
+                Ok(Ok(true)) => {
                     let _ = app.emit("debug-event", serde_json::json!({
                         "session_id": session_id,
                         "level": "info",
@@ -84,12 +87,22 @@ impl Handler for ClientHandler {
                     }));
                     Ok(true)
                 }
-                Ok(false) | Err(_) => {
+                Ok(Ok(false)) | Ok(Err(_)) => {
                     let _ = app.emit("debug-event", serde_json::json!({
                         "session_id": session_id,
                         "level": "warn",
                         "source": "SSH::HostKey",
                         "message": "User rejected host key",
+                    }));
+                    Ok(false)
+                }
+                Err(_) => {
+                    verif.cancel(&request_id).await;
+                    let _ = app.emit("debug-event", serde_json::json!({
+                        "session_id": session_id,
+                        "level": "warn",
+                        "source": "SSH::HostKey",
+                        "message": "Host key verification timed out",
                     }));
                     Ok(false)
                 }
@@ -172,7 +185,7 @@ impl SshSession {
                 let t_ssh = Instant::now();
                 let handler = ClientHandler {
                     app_handle: app.clone(),
-                    host: profile_clone.host.clone(),
+                    host: format!("{}:{}", profile_clone.host, profile_clone.port),
                     session_id: session_id.clone(),
                     host_key_verification: host_key_verification.clone(),
                 };
@@ -357,8 +370,8 @@ impl SshSession {
                     let sess = exec_session.clone();
                     let sem = exec_semaphore.clone();
                     tokio::spawn(async move {
-                        let _permit = sem.acquire().await;
-                        let result = async {
+                        let result = timeout(EXEC_TIMEOUT, async {
+                            let _permit = sem.acquire().await;
                             let mut exec_channel = {
                                 let sess = sess.lock().await;
                                 sess.channel_open_session()
@@ -371,34 +384,57 @@ impl SshSession {
                                 .map_err(|e| format!("exec failed: {}", e))?;
 
                             let mut output = Vec::new();
+                            let mut exit_status: Option<u32> = None;
                             loop {
                                 match exec_channel.wait().await {
                                     Some(ChannelMsg::Data { data }) => {
                                         output.extend_from_slice(&data);
+                                    }
+                                    Some(ChannelMsg::ExitStatus { exit_status: status }) => {
+                                        exit_status = Some(status);
                                     }
                                     Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) => break,
                                     None => break,
                                     _ => {}
                                 }
                             }
-                            String::from_utf8(output).map_err(|e| format!("utf8: {}", e))
+                            let text = String::from_utf8(output).map_err(|e| format!("utf8: {}", e))?;
+                            match exit_status {
+                                Some(0) | None => Ok(text),
+                                Some(code) => Err(format!("Command exited with code {}", code)),
+                            }
+                        }).await;
+                        let result = match result {
+                            Ok(result) => result,
+                            Err(_) => Err(format!("exec timed out after {}s", EXEC_TIMEOUT.as_secs())),
                         };
-                        let _ = reply.send(result.await);
+                        let _ = reply.send(result);
                     });
                 }
             });
 
-            // Terminal read loop
+            // Terminal read loop – timeout ensures we don't hang forever
+            // if the SSH connection drops without clean Eof/Close.
             loop {
-                match read_half.wait().await {
-                    Some(ChannelMsg::Data { data }) => {
+                match timeout(READ_IDLE_TIMEOUT, read_half.wait()).await {
+                    Ok(Some(ChannelMsg::Data { data })) => {
                         if stdout_tx.send(data.to_vec()).is_err() {
                             break;
                         }
                     }
-                    Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) => break,
-                    None => break,
-                    _ => {}
+                    Ok(Some(ChannelMsg::Eof)) | Ok(Some(ChannelMsg::Close)) => break,
+                    Ok(None) => break,
+                    Err(_) => {
+                        // Idle timeout — connection likely dead
+                        let _ = app.emit("debug-event", serde_json::json!({
+                            "session_id": session_id,
+                            "level": "warn",
+                            "source": "SSH::ReadLoop",
+                            "message": format!("No terminal data for {}s — closing session", READ_IDLE_TIMEOUT.as_secs()),
+                        }));
+                        break;
+                    }
+                    Ok(Some(_)) => {}
                 }
             }
 

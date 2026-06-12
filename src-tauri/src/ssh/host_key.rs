@@ -10,7 +10,7 @@ use tokio::sync::{Mutex, oneshot};
 /// `{config_dir}/eussh/known_hosts` using one entry per line:
 ///
 /// ```text
-/// <host> <fingerprint>
+/// <host:port> <fingerprint>
 /// ```
 ///
 /// Where `<fingerprint>` is the output of `PublicKey::fingerprint(HashAlg::Sha256)`,
@@ -40,7 +40,7 @@ impl HostKeyVerificationManager {
 
     // ── known_hosts helpers ──────────────────────────────────────────
 
-    /// Returns `true` when a line `<host> <fingerprint>` already exists.
+    /// Returns `true` when a line `<host:port> <fingerprint>` already exists.
     pub fn is_known(&self, host: &str, fingerprint: &str) -> bool {
         let file = match fs::File::open(&self.known_hosts_path) {
             Ok(f) => f,
@@ -154,5 +154,12 @@ impl HostKeyVerificationManager {
         // silently — that's fine.
         let _ = p.sender.send(accepted);
         Ok(())
+    }
+
+    pub async fn cancel(&self, request_id: &str) {
+        let mut pending = self.pending.lock().await;
+        if let Some(p) = pending.remove(request_id) {
+            let _ = p.sender.send(false);
+        }
     }
 }
