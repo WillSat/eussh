@@ -23,11 +23,6 @@ impl ConfigStore {
         self.load_unlocked()
     }
 
-    pub fn save(&self, config: &AppConfig) -> Result<(), String> {
-        let _guard = self.lock.lock().map_err(|_| "Config lock poisoned".to_string())?;
-        self.save_unlocked(config)
-    }
-
     pub fn update<F, T>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&mut AppConfig) -> Result<T, String>,
