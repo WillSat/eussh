@@ -4,6 +4,7 @@
   "identifier": "com.eussh.desktop",
   "build": {
     "beforeDevCommand": "node node_modules/vite/bin/vite.js",
+    "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
