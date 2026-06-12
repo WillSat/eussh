@@ -56,31 +56,8 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      - name: Debug macOS environment
-        if: runner.os == 'macOS'
-        run: |
-          echo "=== macOS version ===" && sw_vers
-          echo "=== Disk space ===" && df -h /Users/runner/work
-          echo "=== Tauri CLI version ===" && npx tauri --version
-          echo "=== hdiutil available ===" && which hdiutil
-
       - name: Build Tauri
-        run: npx tauri build --verbose 2>&1 | tee build.log
-        shell: bash
-
-      - name: Debug macOS bundle (on failure)
-        if: failure() && runner.os == 'macOS'
-        run: |
-          echo "=== Build log tail ==="
-          tail -100 build.log 2>/dev/null || true
-          echo "=== .app exists? ==="
-          ls -la src-tauri/target/release/bundle/macos/ 2>/dev/null || true
-          echo "=== DMG dir ==="
-          ls -la src-tauri/target/release/bundle/dmg/ 2>/dev/null || true
-          echo "=== bundle_dmg.sh ==="
-          if [ -f src-tauri/target/release/bundle/dmg/bundle_dmg.sh ]; then
-            cat src-tauri/target/release/bundle/dmg/bundle_dmg.sh
-          fi
+        run: npx tauri build
 
       - name: Upload artifacts to release
         env:
