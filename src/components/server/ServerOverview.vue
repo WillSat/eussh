@@ -52,7 +52,7 @@ function resolveTheme() {
   else   { textPri.value='#1d1d1f'; textSec.value='#86868b'; textTer.value='#aeaeb2'; bgSec.value='#f5f5f7'; bgTer.value='#e8e8ed'; borderClr.value='#d0d0d5'; trackClr.value='#e8e8ed' }
 }
 
-// ── Copy IP to clipboard ──────────────────────────────────────────
+// 閳光偓閳光偓 Copy IP to clipboard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 const copiedIp = ref(null) // the IP that was just copied, for brief feedback
 function copyIp(ip) {
   navigator.clipboard.writeText(ip).then(() => {
@@ -61,31 +61,50 @@ function copyIp(ip) {
   }).catch(() => {})
 }
 
-// ── Format ────────────────────────────────────────────────────────
+// 閳光偓閳光偓 Format 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 function fmtMib(v) { if (v == null) return '--'; return v >= 1024 ? (v / 1024).toFixed(1) + ' GiB' : v + ' MiB' }
+
 
 // ── ECharts ───────────────────────────────────────────────────────
 const cpuGaugeEl = ref(null); const memGaugeEl = ref(null)
 const diskGaugeEl = ref(null); const swapGaugeEl = ref(null)
 const mapEl = ref(null)
 let cpuGauge=null, memGauge=null, diskGauge=null, swapGauge=null, mapChart=null
-let wGeoLoaded=false, wGeoP=null
-
+let wGeoLoaded=false, wGeoP=null, initPending=false
 function gaugeOption(pct) {
   const v = pct ?? 0; const c = ACCENT.value
   return { series: [{ type: 'pie', radius: ['68%','88%'], center: ['50%','50%'], silent: true, hoverAnimation: false, label: { show: false }, emphasis: { disabled: true }, animation: true, animationDuration: 500, data: [{ value: v, itemStyle: { color: c, borderRadius: 4 } }, { value: Math.max(0, 100 - v), itemStyle: { color: trackClr.value } }] }] }
 }
-function updateGauges() { if (cpuGauge) { cpuGauge.setOption(gaugeOption(cpuPercent.value), true); memGauge.setOption(gaugeOption(memoryPercent.value), true); diskGauge.setOption(gaugeOption(diskPercent.value), true); swapGauge.setOption(gaugeOption(swapPercent.value), true) } }
+function updateGauges() {
+  if (!cpuGauge) return
+  try {
+    cpuGauge.setOption(gaugeOption(cpuPercent.value), true)
+    memGauge.setOption(gaugeOption(memoryPercent.value), true)
+    diskGauge.setOption(gaugeOption(diskPercent.value), true)
+    swapGauge.setOption(gaugeOption(swapPercent.value), true)
+  } catch (e) { log.warn('gauge setOption failed', e?.message) }
+}
 
 function mapOption() {
   const g = geoLocation.value
   return { backgroundColor: 'transparent', geo: { map: 'world', roam: false, zoom: 1.1, center: [0,20], silent: true, itemStyle: { areaColor: bgTer.value, borderColor: borderClr.value, borderWidth: 0.5 }, emphasis: { disabled: true } }, series: g ? [{ type: 'effectScatter', coordinateSystem: 'geo', data: [[g.lng, g.lat, 1]], symbolSize: 8, showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3.5, period: 4.5 }, itemStyle: { color: ACCENT.value }, zlevel: 1 }] : [] }
 }
-function updateMap() { if (mapChart) mapChart.setOption(mapOption(), true) }
+function updateMap() {
+  if (!mapChart) return
+  try { mapChart.setOption(mapOption(), true) } catch (e) { log.warn('map setOption failed', e?.message) }
+}
 
 let resizeObs = null
 function disposeAll() { resizeObs?.disconnect(); resizeObs = null; cpuGauge?.dispose(); cpuGauge = null; memGauge?.dispose(); memGauge = null; diskGauge?.dispose(); diskGauge = null; swapGauge?.dispose(); swapGauge = null; mapChart?.dispose(); mapChart = null }
-function startResizeObserver() { resizeObs?.disconnect(); resizeObs = new ResizeObserver(() => { cpuGauge?.resize(); memGauge?.resize(); diskGauge?.resize(); swapGauge?.resize(); mapChart?.resize() }); [cpuGaugeEl.value, memGaugeEl.value, diskGaugeEl.value, swapGaugeEl.value, mapEl.value].forEach(el => { if (el) resizeObs.observe(el) }) }
+function startResizeObserver() {
+  resizeObs?.disconnect()
+  resizeObs = new ResizeObserver(() => {
+    try {
+      cpuGauge?.resize(); memGauge?.resize(); diskGauge?.resize(); swapGauge?.resize(); mapChart?.resize()
+    } catch (e) { log.warn('resize failed', e?.message) }
+  })
+  ;[cpuGaugeEl.value, memGaugeEl.value, diskGaugeEl.value, swapGaugeEl.value, mapEl.value].forEach(el => { if (el) resizeObs.observe(el) })
+}
 async function loadWorldGeo() { if (wGeoLoaded) return true; if (wGeoP) return wGeoP; wGeoP = (async () => { try { const r = await fetch('/world.json'); const j = await r.json(); echarts.registerMap('world', j); wGeoLoaded = true; return true } catch (e) { log.error('world.json', e?.message); return false } })(); return wGeoP }
 async function initCharts() { await nextTick(); resolveTheme(); const geoOk = await loadWorldGeo(); disposeAll(); if (cpuGaugeEl.value) { cpuGauge = echarts.init(cpuGaugeEl.value); memGauge = echarts.init(memGaugeEl.value); diskGauge = echarts.init(diskGaugeEl.value); swapGauge = echarts.init(swapGaugeEl.value); updateGauges() } if (mapEl.value && geoOk) { mapChart = echarts.init(mapEl.value); updateMap() } startResizeObserver() }
 
@@ -96,7 +115,7 @@ let dmObs = null
 onMounted(() => { setTimeout(initCharts, 50); dmObs = new MutationObserver(() => { resolveTheme(); disposeAll(); initCharts() }); dmObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }) })
 onBeforeUnmount(() => { dmObs?.disconnect(); disposeAll() })
 
-// ── Derived ───────────────────────────────────────────────────────
+// ── Derived ────────────────────────────────────────────────────────
 const memLabel  = computed(() => memoryUsedMib.value != null && memoryTotalMib.value != null ? `${fmtMib(memoryUsedMib.value)} / ${fmtMib(memoryTotalMib.value)}` : null)
 const swapLabel = computed(() => { const u=swapUsedMib.value; const t=swapTotalMib.value; if (t==null||t===0) return null; return u!=null ? `${fmtMib(u)} / ${fmtMib(t)}` : `0 / ${fmtMib(t)}` })
 const diskLabel = computed(() => diskTotal.value && diskUsed.value ? `${diskUsed.value} / ${diskTotal.value}` : null)
@@ -107,7 +126,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
   <div class="h-full overflow-y-auto bg-[var(--color-bg-primary)]">
     <div class="max-w-6xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-5">
 
-      <!-- ═══ SKELETON ═══ -->
+      <!-- 閳烘劏鏅查埡?SKELETON 閳烘劏鏅查埡?-->
       <Transition name="skel-fade">
         <div v-if="!firstLoadDone" class="space-y-5">
           <div class="flex items-start justify-between gap-3">
@@ -129,10 +148,10 @@ const hasIps    = computed(() => allIps.value.length > 0)
         </div>
       </Transition>
 
-      <!-- ═══ CONTENT ═══ -->
+      <!-- 閳烘劏鏅查埡?CONTENT 閳烘劏鏅查埡?-->
       <div :class="['space-y-5 transition-opacity duration-400', firstLoadDone ? 'opacity-100' : 'opacity-0']">
 
-        <!-- ── HEADER ──────────────────────────────────────────── -->
+        <!-- 閳光偓閳光偓 HEADER 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 -->
         <div class="flex items-start justify-between flex-wrap gap-3">
           <div class="min-w-0">
             <h2 class="text-lg font-bold tracking-tight" :style="{ color: textPri }">
@@ -160,7 +179,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
           </div>
         </div>
 
-        <!-- ── GAUGES ──────────────────────────────────────────── -->
+        <!-- 閳光偓閳光偓 GAUGES 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="gauge-card">
             <div class="gauge-chart-wrap">
@@ -197,9 +216,9 @@ const hasIps    = computed(() => allIps.value.length > 0)
           </div>
         </div>
 
-        <!-- ── INFO CARDS + WORLD MAP ──────────────────────────── -->
+        <!-- 閳光偓閳光偓 INFO CARDS + WORLD MAP 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Left: info cards (2×2) -->
+          <!-- Left: info cards (2�?) -->
           <div class="grid grid-cols-2 gap-3 content-start">
             <!-- Uptime -->
             <div class="info-card" :style="{ background: bgSec, borderColor: borderClr }">
@@ -234,7 +253,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
                 <span class="info-card-label" :style="{ color: textTer }">{{ t('overview.host') }}</span>
               </div>
               <p class="info-card-value font-mono truncate mb-1" :style="{ color: textPri }">{{ props.host }}</p>
-              <!-- IP list — each IP clickable to copy -->
+              <!-- IP list �?each IP clickable to copy -->
               <div v-if="hasIps" class="flex-1 space-y-0.5">
                 <button
                   v-for="ip in allIps" :key="ip"
@@ -280,7 +299,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
 </template>
 
 <style scoped>
-/* ── Skeleton ─────────────────────────────────────────────────── */
+/* 閳光偓閳光偓 Skeleton 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光�?*/
 .skeleton-block { background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-bg-tertiary) 50%, var(--color-bg-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
 .skeleton-card  { background: var(--color-bg-secondary); border: 1px solid var(--color-border); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -288,13 +307,13 @@ const hasIps    = computed(() => allIps.value.length > 0)
 .skel-fade-leave-active { transition: opacity 300ms ease; }
 .skel-fade-enter-from, .skel-fade-leave-to { opacity: 0; }
 
-/* ── Buttons ──────────────────────────────────────────────────── */
+/* 閳光偓閳光偓 Buttons 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
 .btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.5rem; color: #fff; background: var(--color-accent); transition: filter 150ms; }
 .btn-primary:hover { filter: brightness(1.1); }
 .btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.5rem; border: 1px solid var(--color-border); color: var(--color-text-primary); background: var(--color-bg-secondary); transition: background 150ms; }
 .btn-secondary:hover { background: var(--color-bg-tertiary); }
 
-/* ── Gauge ────────────────────────────────────────────────────── */
+/* 閳光偓閳光偓 Gauge 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
 .gauge-card { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; padding: 1rem 0.75rem; border-radius: 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); transition: border-color 200ms; }
 .gauge-card:hover { border-color: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 .gauge-chart-wrap { display: grid; place-items: center; width: 100px; height: 100px; position: relative; }
@@ -305,14 +324,14 @@ const hasIps    = computed(() => allIps.value.length > 0)
 .gauge-title { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .gauge-sub   { font-size: 0.6rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
-/* ── Info card ────────────────────────────────────────────────── */
+/* 閳光偓閳光偓 Info card 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
 .info-card { padding: 0.75rem; border-radius: 0.75rem; border: 1px solid; }
 .info-card-row { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.375rem; }
 .info-card-icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 .info-card-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .info-card-value { font-size: 0.8125rem; font-weight: 500; }
 
-/* ── IP list ──────────────────────────────────────────────────── */
+/* 閳光偓閳光偓 IP list 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
 .ip-line {
   display: flex; align-items: flex-start; gap: 0.25rem;
   width: 100%; padding: 1px 0; border: none; background: none; cursor: pointer;
@@ -331,7 +350,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
   min-width: 0;
 }
 
-/* ── Responsive ───────────────────────────────────────────────── */
+/* 閳光偓閳光偓 Responsive 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光�?*/
 @media (max-width: 640px) {
   .gauge-chart-wrap { width: 80px; height: 80px; }
   .gauge-value { font-size: 1.25rem; }

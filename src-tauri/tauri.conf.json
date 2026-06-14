@@ -1,6 +1,6 @@
 {
   "productName": "eussh",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "identifier": "com.eussh.desktop",
   "build": {
     "beforeDevCommand": "node node_modules/vite/bin/vite.js",

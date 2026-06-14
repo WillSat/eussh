@@ -19,7 +19,7 @@ export const useSettingsStore = defineStore('settings', {
     showTraffic: true,
     checkUpdates: true,
     showDebug: false,
-    showGeoLookup: false,
+    showGeoLookup: true,
   }),
 
   getters: {
