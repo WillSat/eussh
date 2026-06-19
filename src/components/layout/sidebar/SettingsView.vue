@@ -93,7 +93,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
           </label>
         </div>
         <div class="pt-3 mt-1 border-t border-[var(--color-border)] space-y-2">
-          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.3</span></div>
+          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.4</span></div>
           <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">License</span><span class="text-[var(--color-text-primary)]">MIT</span></div>
         </div>
       </div>
