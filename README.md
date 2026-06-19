@@ -38,7 +38,7 @@
 前往 [Releases](https://github.com/eussh/eussh/releases) 页面下载对应平台的安装包。
 
 - **Windows**: `.msi` 和 `.exe` 安装程序
-- **macOS**: `.dmg` 磁盘映像
+- **macOS**: `.dmg` 磁盘映像（如提示「磁盘映像损坏」，见下方[常见问题](#%EF%B8%8F-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)）
 - **Linux**: `.deb` 和 `.AppImage` 包
 
 ### 从源码构建
@@ -128,6 +128,18 @@ npx tauri build    # 生产构建
 ### v1.3.1
 
 - Activity Bar 侧栏、主机密钥验证（TOFU）、断线自动重连、批量命令执行
+
+## ⚠️ 常见问题
+
+### macOS：下载的 DMG 提示"磁盘映像损坏"
+
+当前构建的 DMG 未经代码签名，从 GitHub Release 下载后会带上 `com.apple.quarantine` 属性，导致 macOS Gatekeeper 误报损坏。
+
+临时解决：
+
+```bash
+xattr -d com.apple.quarantine /path/to/eussh.dmg
+```
 
 ## 📄 开源许可
 
