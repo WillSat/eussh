@@ -105,5 +105,5 @@ export function useXterm(sessionIdRef) {
 
   onBeforeUnmount(destroy)
 
-  return { term, containerRef, init, fit, focus, refitAndFocus, getSelection, destroy }
+  return { term, containerRef, init, focus, refitAndFocus, getSelection, destroy }
 }

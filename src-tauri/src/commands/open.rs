@@ -1,6 +1,4 @@
-use tauri::command;
-
-#[command]
+#[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     validate_url(&url)?;
 

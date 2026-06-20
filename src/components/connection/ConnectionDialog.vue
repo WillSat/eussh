@@ -23,6 +23,8 @@ const form = reactive({
   privateKeyPath: '',
   passphrase: '',
   keepaliveSeconds: null,
+  reconnectEnabled: true,
+  reconnectMaxAttempts: 5,
 })
 
 const errors = ref({})
@@ -39,6 +41,8 @@ watch(() => props.connection, (conn) => {
       privateKeyPath: conn.auth_method?.type === 'private_key' ? (conn.auth_method.value?.private_key_path || '') : '',
       passphrase: conn.auth_method?.type === 'private_key' ? (conn.auth_method.value?.passphrase || '') : '',
       keepaliveSeconds: conn.keepalive_seconds || null,
+      reconnectEnabled: conn.reconnect_enabled !== undefined ? conn.reconnect_enabled : true,
+      reconnectMaxAttempts: conn.reconnect_max_attempts || 5,
     })
     errors.value = {}
   } else {
@@ -46,6 +50,7 @@ watch(() => props.connection, (conn) => {
       name: '', host: '', port: 22, username: '',
       authMethod: 'password', password: '', privateKeyPath: '',
       passphrase: '', keepaliveSeconds: null,
+      reconnectEnabled: true, reconnectMaxAttempts: 5,
     })
   }
 }, { immediate: true })
@@ -79,6 +84,8 @@ function onSubmit() {
     auth_method: authMethod,
     group: null,
     keepalive_seconds: form.keepaliveSeconds || null,
+    reconnect_enabled: form.reconnectEnabled,
+    reconnect_max_attempts: form.reconnectEnabled ? form.reconnectMaxAttempts : null,
     last_connected: props.connection?.last_connected || null,
   })
 }
@@ -177,6 +184,26 @@ function onSubmit() {
               focus:outline-none focus:border-[var(--color-accent)] transition-all" />
           <span class="text-[10px] text-[var(--color-text-tertiary)]">s (0 = {{ t('connection.keepaliveOff') }})</span>
         </div>
+      </div>
+
+      <!-- Auto Reconnect -->
+      <div class="pt-1 border-t border-[var(--color-border)]">
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-xs font-medium text-[var(--color-text-secondary)]">{{ t('connection.reconnect') }}</span>
+          <button type="button" role="switch" :aria-checked="form.reconnectEnabled"
+            @click="form.reconnectEnabled = !form.reconnectEnabled"
+            :class="['inline-flex h-4.5 w-8 shrink-0 rounded-full border-2 border-transparent transition-all duration-200', form.reconnectEnabled ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-bg-tertiary)]']">
+            <span :class="['inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200', form.reconnectEnabled ? 'translate-x-4' : 'translate-x-0.5']" />
+          </button>
+        </label>
+        <div v-if="form.reconnectEnabled" class="flex items-center gap-1.5 mt-2">
+          <span class="text-[10px] text-[var(--color-text-tertiary)]">{{ t('connection.reconnectMax') }}</span>
+          <input v-model.number="form.reconnectMaxAttempts" type="number" min="1" max="20"
+            class="w-14 px-2 py-0.5 text-xs text-right rounded border border-[var(--color-border)]
+              bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-mono
+              focus:outline-none focus:border-[var(--color-accent)] transition-all" />
+        </div>
+        <p v-else class="text-[10px] text-[var(--color-text-tertiary)] mt-1">{{ t('connection.reconnectOff') }}</p>
       </div>
 
       <div class="flex justify-between gap-2 pt-2">

@@ -11,7 +11,8 @@ use crate::ssh::host_key::HostKeyVerificationManager;
 use crate::ssh::session::SharedSession;
 
 const DEFAULT_EXEC_TIMEOUT: Duration = Duration::from_secs(30);
-const PING_COOLDOWN_MS: u64 = 2_000; // minimum 2s between pings per session
+const PING_COOLDOWN_MS: u64 = 2_000;
+const SESSION_NOT_FOUND: &str = "Session not found";
 
 pub struct SshManager {
     sessions: Arc<RwLock<HashMap<String, SshSessionHandle>>>,
@@ -110,7 +111,7 @@ impl SshManager {
         let sessions = self.sessions.read().await;
         let handle = sessions
             .get(session_id)
-            .ok_or_else(|| "Session not found".to_string())?;
+            .ok_or_else(|| SESSION_NOT_FOUND.to_string())?;
         handle
             .stdin_tx
             .send(data)
@@ -128,7 +129,7 @@ impl SshManager {
             let sessions = self.sessions.read().await;
             let handle = sessions
                 .get(session_id)
-                .ok_or_else(|| "Session not found".to_string())?;
+                .ok_or_else(|| SESSION_NOT_FOUND.to_string())?;
             handle
                 .exec_tx
                 .send((command.to_string(), reply_tx))
@@ -146,7 +147,7 @@ impl SshManager {
         sessions
             .get(session_id)
             .map(|h| h.session.clone())
-            .ok_or_else(|| "Session not found".to_string())
+            .ok_or_else(|| SESSION_NOT_FOUND.to_string())
     }
 
     /// Rate-limited ping gate. Returns Ok(()) if a ping is allowed now,
@@ -167,7 +168,7 @@ impl SshManager {
         let sessions = self.sessions.read().await;
         let handle = sessions
             .get(session_id)
-            .ok_or_else(|| "Session not found".to_string())?;
+            .ok_or_else(|| SESSION_NOT_FOUND.to_string())?;
         let last = handle.last_ping_ms.swap(now_ms, Ordering::AcqRel);
         if last > 0 && now_ms.saturating_sub(last) < PING_COOLDOWN_MS {
             return Err("rate-limited".to_string());
@@ -184,7 +185,7 @@ impl SshManager {
         let sessions = self.sessions.read().await;
         let handle = sessions
             .get(session_id)
-            .ok_or_else(|| "Session not found".to_string())?;
+            .ok_or_else(|| SESSION_NOT_FOUND.to_string())?;
         handle
             .resize_tx
             .send((cols, rows))

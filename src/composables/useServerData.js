@@ -320,12 +320,11 @@ export function useServerData(sessionIdRef) {
 
   return {
     hostname, osInfo, kernelVer, uptime, timezone,
-    loadAvg, cpuCores, cpuPercent,
+    cpuCores, cpuPercent,
     memoryUsedMib, memoryTotalMib, memoryPercent,
     swapUsedMib, swapTotalMib, swapPercent,
     diskTotal, diskUsed, diskPercent,
     allIps, geoLocation,
-    loading, staticLoading, firstLoadDone, dataStale,
-    fetchDynamic, startPolling, stopPolling,
+    staticLoading, firstLoadDone, dataStale,
   }
 }

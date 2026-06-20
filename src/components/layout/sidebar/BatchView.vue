@@ -6,7 +6,6 @@ import { invoke } from '@/utils/ipc'
 
 const { t } = useI18n()
 const serverStore = useServerStore()
-defineProps({ width: Number })
 
 const connected = computed(() => serverStore.servers.filter(s => s.tabs.some(t => t.status === 'connected')))
 const checked = ref(new Set())

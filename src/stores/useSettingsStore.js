@@ -14,7 +14,6 @@ export const useSettingsStore = defineStore('settings', {
     monitorRefreshSecs: 10,
     pingIntervalSecs: 5,
     accentColor: '#007AFF',
-    titlebarStyle: 'macos',
     statusbarStyle: 'default',
     showTraffic: true,
     checkUpdates: true,
@@ -47,7 +46,6 @@ export const useSettingsStore = defineStore('settings', {
           if (s.monitor_refresh_secs) this.monitorRefreshSecs = s.monitor_refresh_secs
           if (s.ping_interval_secs) this.pingIntervalSecs = s.ping_interval_secs
           if (s.accent_color) this.accentColor = s.accent_color
-          if (s.titlebar_style) this.titlebarStyle = s.titlebar_style
           if (s.statusbar_style) this.statusbarStyle = s.statusbar_style
           if (s.show_traffic !== undefined) this.showTraffic = s.show_traffic
           if (s.check_updates !== undefined) this.checkUpdates = s.check_updates
@@ -74,7 +72,6 @@ export const useSettingsStore = defineStore('settings', {
               monitor_refresh_secs: this.monitorRefreshSecs,
               ping_interval_secs: this.pingIntervalSecs,
               accent_color: this.accentColor,
-              titlebar_style: this.titlebarStyle,
               statusbar_style: this.statusbarStyle,
               show_traffic: this.showTraffic,
               check_updates: this.checkUpdates,
@@ -91,11 +88,6 @@ export const useSettingsStore = defineStore('settings', {
       this.applyTheme()
       this.save()
       try { localStorage.setItem('eussh-theme', theme) } catch {}
-    },
-
-    setTitlebarStyle(style) {
-      this.titlebarStyle = style
-      this.save()
     },
 
     setStatusbarStyle(style) {

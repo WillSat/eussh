@@ -1,6 +1,5 @@
 <script setup>
-import { ref, onMounted, onErrorCaptured, watch, reactive, defineAsyncComponent } from 'vue'
-import TitleBar from './TitleBar.vue'
+import { ref, onMounted, onErrorCaptured, watch, reactive, defineAsyncComponent, computed } from 'vue'
 import ActivityBar from './ActivityBar.vue'
 import Sidebar from './Sidebar.vue'
 import MainTabBar from './MainTabBar.vue'
@@ -24,6 +23,7 @@ import { useToast } from '@/composables/useToast'
 import { useLogger } from '@/composables/useLogger'
 import { useI18n } from '@/composables/useI18n'
 import { listen } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 const log = useLogger('AppShell')
 const { init: initI18n, t } = useI18n()
@@ -37,9 +37,17 @@ const { state: toast, close: closeToast, error: showError } = useToast()
 const activeView = ref('servers')
 const showSettingsOverlay = ref(false)
 const hostKeyDialog = ref(null)
-const vueError = ref(null)
 
 log.info('setup start')
+
+const win = getCurrentWindow()
+
+const title = computed(() => {
+  const s = serverStore.activeServer
+  return s ? `${s.nickname} - Eussh` : 'Eussh'
+})
+
+watch(title, (t) => { try { win.setTitle(t) } catch {} }, { immediate: true })
 
 function handleActivitySelect(id) {
   if (id === 'settings') {
@@ -101,7 +109,6 @@ function handleAnimationEnd(_e) {
 onErrorCaptured((err, instance, info) => {
   const msg = err instanceof Error ? err.message : String(err)
   log.error(`Vue error in ${instance?.$options?.name || instance?.type?.name || '?'}: ${msg}`, { info, stack: err?.stack })
-  vueError.value = msg
   showError(`Render error: ${msg}`)
   return false // prevent propagation
 })
@@ -162,14 +169,12 @@ onMounted(async () => {
     log.info('onMounted complete')
   } catch (e) {
     log.error('onMounted crashed', { message: e?.message, stack: e?.stack })
-    vueError.value = `Startup error: ${e?.message || e}`
   }
 })
 </script>
 
 <template>
-  <div class="app-shell h-screen flex flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
-    <TitleBar />
+    <div class="app-shell h-screen flex flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
     <div class="flex flex-1 overflow-hidden min-h-0">
       <ActivityBar :active="showSettingsOverlay ? 'settings' : activeView" @select="handleActivitySelect" />
       <div class="flex flex-1 overflow-hidden min-h-0 relative">
@@ -209,20 +214,44 @@ onMounted(async () => {
                   :is-active="srv.id === serverStore.activeServerId && tab.id === srv.activeTabId"
                 />
                 <div v-else class="flex flex-col items-center justify-center h-full gap-2">
-                  <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
-                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
-                  </p>
-                  <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
-                  <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
+                  <template v-if="tab.status === 'reconnecting' && tab._reconnectInfo">
+                    <p class="text-sm text-[var(--color-accent)]">
+                      {{ t('reconnect.trying', { n: tab._reconnectInfo.n, max: tab._reconnectInfo.max, s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                    </p>
+                  </template>
+                  <template v-else-if="tab.status === 'reconnect_failed'">
+                    <p class="text-sm text-[var(--color-danger)]">{{ t('reconnect.failed') }}</p>
+                    <button @click="serverStore.retryReconnect(srv.id)"
+                      class="mt-1 px-3 py-1 text-xs font-medium rounded-lg bg-[var(--color-accent)] text-white hover:brightness-110 transition-all">
+                      {{ t('reconnect.retry') }}
+                    </button>
+                  </template>
+                  <p v-else-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
+                  <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
                 </div>
                 <!-- Reconnect overlay on terminal -->
                 <div
                   v-if="tab.sessionId && tab.status === 'reconnecting' && tab._reconnectInfo"
-                  class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex items-center justify-center z-10 pointer-events-none"
+                  class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex flex-col items-center justify-center gap-3 z-10"
                 >
                   <span class="text-xs font-medium text-[var(--color-accent)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg shadow-sm">
-                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                    {{ t('reconnect.trying', { n: tab._reconnectInfo.n, max: tab._reconnectInfo.max, s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
                   </span>
+                  <button @click="serverStore.cancelReconnect(srv.id)"
+                    class="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] transition-colors px-2 py-0.5">
+                    {{ t('reconnect.cancel') }}
+                  </button>
+                </div>
+                <!-- Reconnect failed overlay on terminal -->
+                <div
+                  v-if="tab.sessionId && tab.status === 'reconnect_failed'"
+                  class="absolute inset-0 bg-[var(--color-bg-primary)]/60 flex flex-col items-center justify-center gap-3 z-10"
+                >
+                  <span class="text-xs font-medium text-[var(--color-danger)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg shadow-sm">{{ t('reconnect.failed') }}</span>
+                  <button @click="serverStore.retryReconnect(srv.id)"
+                    class="text-xs font-medium px-3 py-1 rounded-lg bg-[var(--color-accent)] text-white hover:brightness-110 transition-all">
+                    {{ t('reconnect.retry') }}
+                  </button>
                 </div>
               </div>
 
@@ -238,11 +267,20 @@ onMounted(async () => {
                   :session-id="tab.sessionId"
                 />
                 <div v-else class="flex flex-col items-center justify-center h-full gap-2">
-                  <p v-if="tab.status === 'reconnecting' && tab._reconnectInfo" class="text-sm text-[var(--color-accent)]">
-                    {{ t('reconnect.trying', { s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
-                  </p>
-                  <p v-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
-                  <p v-else-if="tab.status !== 'reconnecting'" class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
+                  <template v-if="tab.status === 'reconnecting' && tab._reconnectInfo">
+                    <p class="text-sm text-[var(--color-accent)]">
+                      {{ t('reconnect.trying', { n: tab._reconnectInfo.n, max: tab._reconnectInfo.max, s: Math.ceil(Math.min(30000, Math.pow(2, (tab._reconnectInfo.n || 1) - 1) * 1000) / 1000) }) }}
+                    </p>
+                  </template>
+                  <template v-else-if="tab.status === 'reconnect_failed'">
+                    <p class="text-sm text-[var(--color-danger)]">{{ t('reconnect.failed') }}</p>
+                    <button @click="serverStore.retryReconnect(srv.id)"
+                      class="mt-1 px-3 py-1 text-xs font-medium rounded-lg bg-[var(--color-accent)] text-white hover:brightness-110 transition-all">
+                      {{ t('reconnect.retry') }}
+                    </button>
+                  </template>
+                  <p v-else-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
+                  <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
                 </div>
               </div>
             </div>

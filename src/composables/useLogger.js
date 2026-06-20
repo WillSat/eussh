@@ -71,5 +71,5 @@ export function useLogger(source) {
 
   function togglePanel() { state.showPanel = !state.showPanel }
 
-  return { debug, info, warn, error, trace, logState: state, togglePanel, setLoggingEnabled }
+  return { debug, info, warn, error, logState: state, togglePanel, setLoggingEnabled }
 }

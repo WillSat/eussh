@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useFileManagerStore } from '@/stores/useFileManagerStore'
 import { useI18n } from '@/composables/useI18n'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
 import BreadcrumbBar from './BreadcrumbBar.vue'
 import FileListView from './FileListView.vue'
@@ -60,7 +60,7 @@ onMounted(async () => {
 
   // Drag-drop from local filesystem
   try {
-    const webview = getCurrentWebview()
+    const webview = getCurrentWebviewWindow()
     unlistenDrag = await webview.onDragDropEvent((event) => {
       if (event.payload.type === 'enter') { dragOver.value = true }
       else if (event.payload.type === 'leave') { dragOver.value = false }

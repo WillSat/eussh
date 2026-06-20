@@ -8,21 +8,12 @@ export const useConnectionStore = defineStore('connections', {
   state: () => ({
     profiles: [],
     connecting: new Set(),
-    loadError: null,
   }),
-
-  getters: {
-    isConnecting: (state) => (id) => state.connecting.has(id),
-  },
 
   actions: {
     async loadProfiles() {
-      try {
-        const config = await invoke('get_config')
-        this.profiles = config.connections || []
-      } catch (e) {
-        this.loadError = e
-      }
+      const config = await invoke('get_config')
+      this.profiles = config.connections || []
     },
 
     async saveProfile(profile) {

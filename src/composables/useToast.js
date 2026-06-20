@@ -24,5 +24,5 @@ export function useToast() {
   function info(message) { show(message, 'info', 3000) }
   function close() { state.visible = false }
 
-  return { state, show, error, success, info, close }
+  return { state, show, error, close }
 }

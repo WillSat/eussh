@@ -3,11 +3,15 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useServerStore } from '@/stores/useServerStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useI18n } from '@/composables/useI18n'
+import { useLogger } from '@/composables/useLogger'
 import { listen } from '@tauri-apps/api/event'
 
 const { t } = useI18n()
 const serverStore = useServerStore()
 const settingsStore = useSettingsStore()
+const log = useLogger('StatusBar')
+
+function toggleDebug() { log.togglePanel() }
 
 const now = ref(new Date())
 const progress = ref(null)
@@ -152,6 +156,11 @@ function getProgressFill() {
     </div>
 
     <div class="flex items-center gap-2 min-w-0">
+      <button
+        v-if="settingsStore.showDebug"
+        @click="toggleDebug"
+        :class="['px-1.5 py-0.5 text-[10px] font-medium rounded transition-colors', isAccent ? 'hover:bg-white/20' : 'hover:bg-[var(--color-bg-tertiary)]']"
+      >{{ t('titlebar.debug') }}</button>
       <span :class="dotClass" />
       <span class="truncate">{{ statusText }}</span>
       <span v-if="latencyMs !== null" :class="['shrink-0', getDimText()]">{{ latencyText }}</span>

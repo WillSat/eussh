@@ -3,7 +3,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::Engine;
-use rand::RngCore;
+use rand_core::RngCore;
 use ring::pbkdf2;
 
 const SALT: &[u8] = b"eussh-config-salt-v1";

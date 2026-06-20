@@ -50,5 +50,5 @@ export function useI18n() {
     }
   }
 
-  return { t, locale, systemLocale, setLocale, init, locales: Object.keys(locales) }
+  return { t, locale, setLocale, init }
 }

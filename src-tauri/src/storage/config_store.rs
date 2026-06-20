@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use crate::models::config::AppConfig;
 use crate::storage::encrypt;
 
@@ -18,8 +18,12 @@ impl ConfigStore {
         Self { config_path, lock: Mutex::new(()) }
     }
 
+    fn lock(&self) -> Result<MutexGuard<'_, ()>, String> {
+        self.lock.lock().map_err(|_| "Config lock poisoned".to_string())
+    }
+
     pub fn load(&self) -> Result<AppConfig, String> {
-        let _guard = self.lock.lock().map_err(|_| "Config lock poisoned".to_string())?;
+        let _guard = self.lock()?;
         self.load_unlocked()
     }
 
@@ -27,7 +31,7 @@ impl ConfigStore {
     where
         F: FnOnce(&mut AppConfig) -> Result<T, String>,
     {
-        let _guard = self.lock.lock().map_err(|_| "Config lock poisoned".to_string())?;
+        let _guard = self.lock()?;
         let mut config = self.load_unlocked()?;
         let result = f(&mut config)?;
         self.save_unlocked(&config)?;

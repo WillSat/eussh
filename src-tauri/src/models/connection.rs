@@ -12,6 +12,8 @@ pub struct ConnectionProfile {
     pub nickname: Option<String>,
     pub last_connected: Option<f64>,
     pub keepalive_seconds: Option<u32>,
+    pub reconnect_enabled: Option<bool>,
+    pub reconnect_max_attempts: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

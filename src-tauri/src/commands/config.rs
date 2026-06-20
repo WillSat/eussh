@@ -1,8 +1,15 @@
 use tauri::State;
 use crate::state::AppState;
 use crate::models::connection::ConnectionProfile;
-use crate::models::config::AppConfig;
+use crate::models::config::{AppConfig, AppSettings};
 use uuid::Uuid;
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub(crate) struct SaveConfigInput {
+    pub theme: String,
+    pub language: String,
+    pub settings: AppSettings,
+}
 
 #[tauri::command]
 pub async fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
@@ -12,7 +19,7 @@ pub async fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String>
 #[tauri::command]
 pub async fn save_config(
     state: State<'_, AppState>,
-    config: AppConfig,
+    config: SaveConfigInput,
 ) -> Result<(), String> {
     state.config_store.update(|existing| {
         if !config.theme.is_empty() {
@@ -36,13 +43,14 @@ pub async fn save_connection(
             profile.id = Uuid::new_v4().to_string();
         }
 
+        let returned = profile.clone();
         if let Some(existing) = config.connections.iter_mut().find(|c| c.id == profile.id) {
-            *existing = profile.clone();
+            *existing = profile;
         } else {
-            config.connections.push(profile.clone());
+            config.connections.push(profile);
         }
 
-        Ok(profile)
+        Ok(returned)
     })
 }
 

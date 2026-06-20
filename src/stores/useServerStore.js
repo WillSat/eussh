@@ -25,9 +25,6 @@ export const useServerStore = defineStore('servers', {
     activeServer(state) {
       return state.servers.find(s => s.id === state.activeServerId) || null
     },
-    hasServers(state) {
-      return state.servers.length > 0
-    },
   },
 
   actions: {
@@ -60,7 +57,6 @@ export const useServerStore = defineStore('servers', {
 
     // ── Auto-reconnect ────────────────────────────────────────────
     _onDisconnected(sessionId) {
-      // Skip if this session was cancelled (manual close)
       if (_reconnectCancel.has(sessionId)) {
         _reconnectCancel.delete(sessionId)
         return
@@ -74,12 +70,16 @@ export const useServerStore = defineStore('servers', {
       const profile = connStore.profiles.find(p => p.id === server.id)
       if (!profile) return
 
+      if (profile.reconnect_enabled === false) {
+        tab.status = 'disconnected'
+        return
+      }
+
       this._startReconnect(profile, server.id, tab.id, 1)
     },
 
     _startReconnect(profile, serverId, tabId, attempt) {
-      const MAX = 5
-      // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+      const MAX = profile.reconnect_max_attempts || 5
       const delay = Math.min(30000, Math.pow(2, attempt - 1) * 1000)
 
       const server = this.servers.find(s => s.id === serverId)
@@ -87,7 +87,7 @@ export const useServerStore = defineStore('servers', {
       if (!tab) return
 
       tab.status = 'reconnecting'
-      tab._reconnectInfo = { n: attempt, max: MAX }
+      tab._reconnectInfo = { n: attempt, max: MAX, serverId }
 
       const timerId = setTimeout(async () => {
         const srv = this.servers.find(s => s.id === serverId)
@@ -105,17 +105,36 @@ export const useServerStore = defineStore('servers', {
           t._reconnectInfo = undefined
         } catch {
           if (attempt >= MAX) {
-            t.status = 'error'
-            t._reconnectInfo = undefined
-            log.warn('reconnect gave up', { tabId, attempts: attempt })
+            t.status = 'reconnect_failed'
+            log.warn('reconnect exhausted', { tabId, attempts: attempt })
           } else {
             this._startReconnect(fresh, serverId, tabId, attempt + 1)
           }
         }
       }, delay)
 
-      // Track timer for cancellation on manual close
       _reconnectTimers.set(tabId, timerId)
+    },
+
+    cancelReconnect(serverId) {
+      const server = this.servers.find(s => s.id === serverId)
+      if (!server) return
+      for (const tab of server.tabs) {
+        if (tab.status === 'reconnecting') {
+          this._cancelReconnect(tab)
+        }
+      }
+    },
+
+    retryReconnect(serverId) {
+      const server = this.servers.find(s => s.id === serverId)
+      if (!server) return
+      const tab = server.tabs.find(t => t.status === 'reconnect_failed')
+      if (!tab) return
+      const connStore = useConnectionStore()
+      const profile = connStore.profiles.find(p => p.id === serverId)
+      if (!profile) return
+      this._startReconnect(profile, serverId, tab.id, 1)
     },
 
     _cancelReconnect(tab) {
@@ -222,12 +241,6 @@ export const useServerStore = defineStore('servers', {
       this.servers.splice(idx, 1)
       if (this.activeServerId === profileId) {
         this.activeServerId = this.servers[this.servers.length - 1]?.id || null
-      }
-    },
-
-    switchServer(profileId) {
-      if (this.servers.some(s => s.id === profileId)) {
-        this.activeServerId = profileId
       }
     },
 

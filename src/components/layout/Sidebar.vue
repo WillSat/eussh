@@ -18,8 +18,8 @@ onBeforeUnmount(()=>{ document.removeEventListener('mousemove',onMove); document
 </script>
 <template>
   <div class="shrink-0 flex flex-col h-full select-none relative bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)]" :style="{width:W+'px'}">
-    <ServersView v-if="view==='servers'" :width="W" />
-    <BatchView v-else-if="view==='batch'" :width="W" />
+    <ServersView v-if="view==='servers'" />
+    <BatchView v-else-if="view==='batch'" />
     <div @mousedown="onDown" :class="['absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-20 transition-colors',dragging?'bg-[var(--color-accent)]':'bg-transparent hover:bg-[var(--color-accent)]/30']" />
   </div>
 </template>

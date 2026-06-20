@@ -93,7 +93,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
           </label>
         </div>
         <div class="pt-3 mt-1 border-t border-[var(--color-border)] space-y-2">
-          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.4</span></div>
+          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.5</span></div>
           <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">License</span><span class="text-[var(--color-text-primary)]">MIT</span></div>
         </div>
       </div>
@@ -120,15 +120,6 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
             <button v-for="c in accentColors" :key="c" @click="settings.accentColor = c; settings.applyTheme(); settings.save()"
               :class="['w-8 h-8 rounded-full transition-all duration-150 hover:scale-115 active:scale-95', settings.accentColor === c ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-primary)] scale-110 shadow-lg' : 'hover:shadow-md']"
               :style="{ background: c, ringColor: c }" />
-          </div>
-        </div>
-        <!-- Titlebar -->
-        <div>
-          <span class="text-[12px] font-medium text-[var(--color-text-secondary)]">{{ t('settings.titlebarStyle') }}</span>
-          <p class="text-[10px] text-[var(--color-text-tertiary)]/70 mt-0.5 leading-relaxed">{{ t('settingsDesc.titlebar') }}</p>
-          <div class="flex rounded-lg bg-[var(--color-bg-tertiary)]/40 p-0.5 mt-2">
-            <button @click="settings.setTitlebarStyle('macos')" :class="seg(settings.titlebarStyle === 'macos')">{{ t('settings.titlebarMacos') }}</button>
-            <button @click="settings.setTitlebarStyle('win11')" :class="seg(settings.titlebarStyle === 'win11')">{{ t('settings.titlebarWin11') }}</button>
           </div>
         </div>
         <!-- Statusbar -->
