@@ -32,7 +32,7 @@ function seg(active) {
     : 'flex-1 py-1.5 text-[12px] font-medium rounded-md text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]/30 transition-all'
 }
 function inp() {
-  return 'w-full px-2.5 py-1.5 text-[12px] rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all'
+  return 'w-full px-2.5 py-1.5 text-[12px] rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-all'
 }
 
 const presets = Object.entries(COLOR_PRESETS)
@@ -43,7 +43,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
 <template>
   <div class="absolute inset-0 z-50 bg-[var(--color-bg-primary)] flex flex-col">
     <!-- Header bar -->
-    <div class="shrink-0 flex items-center justify-between px-4 h-10 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] select-none">
+    <div class="shrink-0 flex items-center justify-between px-4 h-10 bg-[var(--color-bg-secondary)] select-none">
       <div class="flex items-center gap-2">
         <span class="text-[12px] font-semibold text-[var(--color-text-primary)]">{{ t('settings.title') }}</span>
       </div>
@@ -54,7 +54,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
     </div>
 
     <!-- Tab bar -->
-    <div class="shrink-0 flex items-center gap-1.5 px-3 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/50">
+    <div class="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-primary)]/50">
       <button v-for="st in sTabs" :key="st.id" @click="sTab = st.id"
         :class="['px-3.5 py-1.5 text-[12px] rounded-lg transition-all duration-150', tabClass(st.id)]">
         {{ st.label }}
@@ -92,8 +92,9 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
             </button>
           </label>
         </div>
-        <div class="pt-3 mt-1 border-t border-[var(--color-border)] space-y-2">
-          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.5</span></div>
+        <div class="pt-3 mt-1 space-y-2">
+          <hr class="border-0 h-px bg-[var(--color-bg-tertiary)] mb-2" />
+          <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">Version</span><span class="text-[var(--color-text-primary)] font-mono">1.3.6</span></div>
           <div class="flex justify-between text-[11px]"><span class="text-[var(--color-text-tertiary)]">License</span><span class="text-[var(--color-text-primary)]">MIT</span></div>
         </div>
       </div>
@@ -175,7 +176,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
             <button v-for="[key, p] in presets" :key="key" @click="settings.terminalColorPreset = key; settings.save()"
               :class="['flex items-center gap-2.5 p-2.5 rounded-lg transition-all text-left',
                 settings.terminalColorPreset === key ? 'ring-2 ring-[var(--color-accent)] ring-offset-1 ring-offset-[var(--color-bg-primary)] bg-[var(--color-bg-primary)] shadow-sm' : 'hover:bg-[var(--color-bg-tertiary)]/40']">
-              <div class="w-8 h-5 rounded-sm border border-[var(--color-border)] shrink-0 relative shadow-inner" :style="{ background: p.background }"><div class="absolute right-0 top-0 bottom-0 w-1.5 rounded-r-sm" :style="{ background: p.cursor }" /></div>
+              <div class="w-8 h-5 rounded-sm shrink-0 relative shadow-sm" :style="{ background: p.background }"><div class="absolute right-0 top-0 bottom-0 w-1.5 rounded-r-sm" :style="{ background: p.cursor }" /></div>
               <span class="text-[11px] text-[var(--color-text-secondary)] truncate">{{ p.label }}</span>
             </button>
           </div>
@@ -193,7 +194,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
           <p class="text-[10px] text-[var(--color-text-tertiary)]/70 mt-0.5 leading-relaxed">{{ t('settingsDesc.sysRefresh') }}</p>
           <div class="flex items-center gap-2 mt-2">
             <input type="number" min="3" max="30" :value="settings.monitorRefreshSecs" @change="settings.monitorRefreshSecs = Number($event.target.value); settings.save()"
-              class="w-16 px-2.5 py-1.5 text-[12px] text-right rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all" />
+              class="w-16 px-2.5 py-1.5 text-[12px] text-right rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-all" />
             <span class="text-[11px] text-[var(--color-text-tertiary)]">s</span>
           </div>
         </div>
@@ -202,7 +203,7 @@ function setLang(l) { setLocale(l); settings.language = l; settings.save() }
           <p class="text-[10px] text-[var(--color-text-tertiary)]/70 mt-0.5 leading-relaxed">{{ t('settingsDesc.pingInterval') }}</p>
           <div class="flex items-center gap-2 mt-2">
             <input type="number" min="3" max="120" :value="settings.pingIntervalSecs" @change="settings.pingIntervalSecs = Number($event.target.value); settings.save()"
-              class="w-16 px-2.5 py-1.5 text-[12px] text-right rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all" />
+              class="w-16 px-2.5 py-1.5 text-[12px] text-right rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-all" />
             <span class="text-[11px] text-[var(--color-text-tertiary)]">s</span>
           </div>
         </div>

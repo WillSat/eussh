@@ -10,6 +10,7 @@ import DebugPanel from './DebugPanel.vue'
 import HostKeyDialog from '../connection/HostKeyDialog.vue'
 import VersionCheck from './VersionCheck.vue'
 import SettingsOverlay from './sidebar/SettingsView.vue'
+import RoseSpinner from '@/components/common/RoseSpinner.vue'
 
 // Heavy components loaded on demand to reduce initial bundle size
 const ServerOverview = defineAsyncComponent(() => import('../server/ServerOverview.vue'))
@@ -227,7 +228,7 @@ onMounted(async () => {
                     </button>
                   </template>
                   <p v-else-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('status.error') }}</p>
-                  <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('status.connecting') }}</p>
+                  <RoseSpinner v-else :rose-scale="2.0" :text="t('status.connecting')" />
                 </div>
                 <!-- Reconnect overlay on terminal -->
                 <div
@@ -280,7 +281,7 @@ onMounted(async () => {
                     </button>
                   </template>
                   <p v-else-if="tab.status === 'error'" class="text-sm text-[var(--color-danger)]">{{ t('filemanager.connectionFailed') }}</p>
-                  <p v-else class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.connecting') }}</p>
+                  <RoseSpinner v-else :rose-scale="2.0" :text="t('filemanager.connecting')" />
                 </div>
               </div>
             </div>

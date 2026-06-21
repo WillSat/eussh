@@ -27,7 +27,7 @@ function onFocus() {
 </script>
 
 <template>
-  <div class="flex items-center gap-1 h-8 px-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
+  <div class="flex items-center gap-1 h-8 px-2 bg-[var(--color-bg-secondary)]">
     <button @click="emit('back')" :disabled="!canGoBack"
       :class="['px-1.5 py-0.5 rounded text-sm', canGoBack ? 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]' : 'text-[var(--color-text-tertiary)] opacity-40']"
     >&#x2039;</button>

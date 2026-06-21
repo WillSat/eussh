@@ -85,7 +85,7 @@ onMounted(async () => {
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
       @click.self="remindLater"
     >
-      <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-2xl w-[400px] max-w-[90vw] overflow-hidden">
+      <div class="rounded-xl bg-[var(--color-bg-secondary)] shadow-2xl w-[400px] max-w-[90vw] overflow-hidden">
         <div class="px-6 pt-5 pb-3">
           <h3 class="text-base font-bold text-[var(--color-text-primary)]">
             {{ t('versionCheck.newAvailable') }}
@@ -97,9 +97,9 @@ onMounted(async () => {
         <div v-if="latestBody" class="px-6 pb-2 max-h-[200px] overflow-y-auto">
           <pre class="text-xs text-[var(--color-text-secondary)] font-sans whitespace-pre-wrap">{{ latestBody }}</pre>
         </div>
-        <div class="px-6 py-4 flex items-center justify-end gap-3 border-t border-[var(--color-border)]">
+        <div class="px-6 py-4 flex items-center justify-end gap-3 bg-[var(--color-bg-tertiary)]/50">
           <button @click="remindLater"
-            class="px-4 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] transition-colors">
+            class="px-4 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors">
             {{ t('versionCheck.remindLater') }}
           </button>
           <button @click="goDownload"

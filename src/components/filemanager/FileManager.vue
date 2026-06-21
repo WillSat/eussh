@@ -8,6 +8,7 @@ import BreadcrumbBar from './BreadcrumbBar.vue'
 import FileListView from './FileListView.vue'
 import FileIconView from './FileIconView.vue'
 import ContextMenu from './ContextMenu.vue'
+import RoseSpinner from '@/components/common/RoseSpinner.vue'
 
 const props = defineProps({
   sessionId: { type: String, required: true },
@@ -159,14 +160,14 @@ function formatSize(bytes) {
 <template>
   <div class="h-full flex flex-col bg-[var(--color-bg-primary)] select-none" :class="{ 'ring-2 ring-[var(--color-accent)]': dragOver }">
     <!-- Toolbar -->
-    <div class="flex items-center h-8 px-2 gap-1 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
+    <div class="flex items-center h-8 px-2 gap-1 bg-[var(--color-bg-secondary)] shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
       <button @click="fm.setViewMode('list')"
         :class="['px-2 py-0.5 text-[11px] rounded transition-colors', fm.viewMode === 'list' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
       >&#x2630;</button>
       <button @click="fm.setViewMode('icon')"
         :class="['px-2 py-0.5 text-[11px] rounded transition-colors', fm.viewMode === 'icon' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]']"
       >&#x25A6;</button>
-      <span class="w-px h-4 bg-[var(--color-border)] mx-1" />
+      <span class="w-px h-4 bg-[var(--color-bg-tertiary)] mx-1" />
       <button @click="fm.refresh(props.sessionId)" class="px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded transition-colors">
         &#x21BB;
       </button>
@@ -190,7 +191,7 @@ function formatSize(bytes) {
       @contextmenu.prevent="showContextMenu(null, $event)"
       @click="fm.clearSelection(props.sessionId)">
       <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-primary)]/50 z-10">
-        <span class="text-sm text-[var(--color-text-tertiary)] animate-pulse">{{ t('filemanager.loading') }}</span>
+        <RoseSpinner :rose-scale="2.0" :text="t('filemanager.loading')" />
       </div>
       <div v-if="error" class="text-sm text-[var(--color-danger)] p-4">{{ error }}</div>
       <div v-if="!loading && files.length === 0 && !error" class="flex items-center justify-center h-full">
@@ -227,7 +228,7 @@ function formatSize(bytes) {
         <div class="bg-[var(--color-bg-primary)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] p-4 w-72 select-none" @click.stop>
           <p class="text-sm text-[var(--color-text-primary)] mb-2">{{ t('filemanager.renamePrompt', { name: renameTarget }) }}</p>
           <input v-model="renameName" @keyup.enter="submitRename()" @keyup.escape="renameTarget = null"
-            ref="renameInput" class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]" />
+            ref="renameInput" class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]" />
           <div class="flex justify-end gap-2 mt-3">
             <button @click="renameTarget = null" class="px-3 py-1 text-xs text-[var(--color-text-secondary)]">{{ t('filemanager.cancel') }}</button>
             <button @click="submitRename()" class="px-3 py-1 text-xs bg-[var(--color-accent)] text-white rounded">{{ t('filemanager.rename') }}</button>
@@ -242,7 +243,7 @@ function formatSize(bytes) {
         <div class="bg-[var(--color-bg-primary)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] p-4 w-72 select-none" @click.stop>
           <p class="text-sm text-[var(--color-text-primary)] mb-2">{{ t('filemanager.newFolderPrompt') }}</p>
           <input v-model="newFolderName" @keyup.enter="submitNewFolder()" @keyup.escape="newFolderPrompt = false"
-            class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]" />
+            class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]" />
           <div class="flex justify-end gap-2 mt-3">
             <button @click="newFolderPrompt = false" class="px-3 py-1 text-xs text-[var(--color-text-secondary)]">{{ t('filemanager.cancel') }}</button>
             <button @click="submitNewFolder()" class="px-3 py-1 text-xs bg-[var(--color-accent)] text-white rounded">{{ t('filemanager.create') }}</button>
@@ -257,7 +258,7 @@ function formatSize(bytes) {
         <div class="bg-[var(--color-bg-primary)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] p-4 w-72 select-none" @click.stop>
           <p class="text-sm text-[var(--color-text-primary)] mb-2">{{ t('filemanager.permissionsFor', { name: chmodPrompt }) }}</p>
           <input v-model="chmodMode" @keyup.enter="submitChmod()" @keyup.escape="chmodPrompt = null"
-            class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-mono" />
+            class="w-full px-2 py-1 text-sm rounded-[var(--radius-sm)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-mono" />
           <p class="text-[10px] text-[var(--color-text-tertiary)] mt-1">{{ t('filemanager.chmodHint') }}</p>
           <div class="flex justify-end gap-2 mt-3">
             <button @click="chmodPrompt = null" class="px-3 py-1 text-xs text-[var(--color-text-secondary)]">{{ t('filemanager.cancel') }}</button>

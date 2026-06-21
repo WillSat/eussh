@@ -95,7 +95,7 @@ function toggleConnect(c) {
 <template>
   <div class="flex-1 flex flex-col min-h-0 bg-[var(--color-bg-primary)]">
     <!-- Header -->
-    <div class="shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-[var(--color-border)]">
+    <div class="shrink-0 flex items-center justify-between px-3 py-2.5">
       <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)]">{{ t('sidebar.connections') }}</span>
       <div class="flex items-center gap-2">
         <span v-if="connStore.profiles.length" class="text-[10px] tabular-nums font-medium px-1.5 py-px rounded bg-[var(--color-accent)]/10 text-[var(--color-accent)]">{{ connStore.profiles.length }}</span>
@@ -119,8 +119,8 @@ function toggleConnect(c) {
       <!-- Server items -->
       <div v-for="c in connStore.profiles" :key="c.id"
         @click="serverStore.openServer(c)"
-        :class="['group relative mx-2 my-0.5 rounded-lg cursor-pointer transition-all duration-200 border-l-[3px]',
-          isActive(c) ? 'bg-[var(--color-bg-secondary)] border-[var(--color-accent)]' : 'border-transparent hover:bg-[var(--color-bg-secondary)]/50']">
+        :class="['group relative mx-2 my-0.5 rounded-lg cursor-pointer transition-all duration-200',
+          isActive(c) ? 'bg-accent-dim' : 'hover:bg-[var(--color-bg-secondary)]/50']">
         <div class="px-3 py-2.5 flex items-center gap-2.5">
           <!-- Status dot -->
           <span :class="['w-2 h-2 rounded-full shrink-0 transition-all duration-300', statusDot(statusKey(c))]" />
@@ -168,7 +168,7 @@ function toggleConnect(c) {
     </div>
 
     <!-- Footer -->
-    <div class="shrink-0 px-3 py-2 border-t border-[var(--color-border)]">
+    <div class="shrink-0 px-3 py-2">
       <button @click="newC"
         class="w-full py-1.5 text-[11px] font-medium rounded-lg text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 active:scale-[0.98] transition-all">
         + {{ t('sidebar.addServer') }}

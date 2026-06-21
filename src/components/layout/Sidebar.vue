@@ -17,7 +17,7 @@ function onUp() { dragging.value=false; settings.sidebarWidth=W.value; settings.
 onBeforeUnmount(()=>{ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp) })
 </script>
 <template>
-  <div class="shrink-0 flex flex-col h-full select-none relative bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)]" :style="{width:W+'px'}">
+   <div class="shrink-0 flex flex-col h-full select-none relative bg-[var(--color-bg-sidebar)] shadow-[2px_0_8px_rgba(0,0,0,0.06)]" :style="{width:W+'px'}">
     <ServersView v-if="view==='servers'" />
     <BatchView v-else-if="view==='batch'" />
     <div @mousedown="onDown" :class="['absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-20 transition-colors',dragging?'bg-[var(--color-accent)]':'bg-transparent hover:bg-[var(--color-accent)]/30']" />

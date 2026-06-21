@@ -50,7 +50,7 @@ defineExpose({ show })
       <!-- Dialog -->
       <div
         class="relative w-[420px] max-w-[92vw] bg-[var(--color-bg-primary)] rounded-xl
-          shadow-[var(--shadow-lg)] border border-[var(--color-border)]
+          shadow-[var(--shadow-lg)]
           overflow-hidden select-none"
         @click.stop
       >
@@ -59,8 +59,8 @@ defineExpose({ show })
           :class="[
             'px-5 py-4 flex items-center gap-3',
             state.isKeyChanged
-              ? 'bg-[#FF3B30]/10 border-b border-[#FF3B30]/20'
-              : 'border-b border-[var(--color-border)]'
+              ? 'bg-[#FF3B30]/10'
+              : 'bg-[var(--color-bg-secondary)]'
           ]"
         >
           <svg
@@ -99,10 +99,10 @@ defineExpose({ show })
 
           <div
             :class="[
-              'rounded-lg p-3 border space-y-1',
+              'rounded-lg p-3 space-y-1 shadow-[var(--shadow-sm)]',
               state.isKeyChanged
-                ? 'bg-[#FF3B30]/5 border-[#FF3B30]/20'
-                : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)]'
+                ? 'bg-[#FF3B30]/5'
+                : 'bg-[var(--color-bg-secondary)]'
             ]"
           >
             <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">
@@ -115,7 +115,7 @@ defineExpose({ show })
         </div>
 
         <!-- Footer -->
-        <div class="px-5 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border)]
+        <div class="px-5 py-3 bg-[var(--color-bg-secondary)]
           flex items-center gap-2 justify-end">
           <button
             @click="respond(false, false)"
@@ -128,9 +128,9 @@ defineExpose({ show })
           <button
             @click="respond(true, false)"
             class="px-4 py-1.5 text-xs font-medium rounded-lg
-              border border-[var(--color-border)]
+              bg-[var(--color-bg-tertiary)]
               text-[var(--color-text-primary)]
-              hover:bg-[var(--color-bg-tertiary)] transition-all"
+              hover:brightness-105 transition-all"
           >
             {{ t('hostKey.acceptOnce') }}
           </button>

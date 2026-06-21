@@ -48,7 +48,7 @@ function rowClass(name) {
 <template>
   <table class="w-full text-sm select-none">
     <thead>
-      <tr class="border-b border-[var(--color-border)] text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider">
+      <tr class="bg-[var(--color-bg-tertiary)] text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider">
         <th class="text-left py-1.5 px-3 font-medium">{{ t('filemanager.name') }}</th>
         <th class="text-left py-1.5 px-2 font-medium w-24 hidden lg:table-cell">{{ t('filemanager.perms') }}</th>
         <th class="text-left py-1.5 px-2 font-medium w-24 hidden md:table-cell">{{ t('filemanager.owner') }}</th>

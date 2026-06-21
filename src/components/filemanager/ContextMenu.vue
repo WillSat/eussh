@@ -24,7 +24,7 @@ function act(action) { emit(action); emit('close') }
   <Teleport to="body">
     <div v-if="visible" class="fixed inset-0 z-[60]" @click="emit('close')" @contextmenu.prevent="emit('close')">
       <div
-        class="fixed bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-[var(--radius-sm)] shadow-[var(--shadow-md)] py-1 min-w-[160px] text-[13px] select-none"
+        class="fixed bg-[var(--color-bg-primary)] rounded-[var(--radius-sm)] shadow-[var(--shadow-lg)] py-1 min-w-[160px] text-[13px] select-none"
         :style="{ left: Math.min(x, W - 170) + 'px', top: Math.min(y, H - 300) + 'px' }"
       >
         <!-- File or Folder -->
@@ -37,12 +37,12 @@ function act(action) { emit(action); emit('close') }
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ entry.is_dir ? t('filemanager.downloadAsArchive') : t('filemanager.download') }}
           </button>
-          <div class="border-t border-[var(--color-border)] my-0.5" />
+          <div class="h-px bg-[var(--color-bg-tertiary)] my-0.5" />
           <button @click="act('chmod')"
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ t('filemanager.permissions') }}
           </button>
-          <div class="border-t border-[var(--color-border)] my-0.5" />
+          <div class="h-px bg-[var(--color-bg-tertiary)] my-0.5" />
           <button @click="act('copy')"
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ t('filemanager.copy') }}
@@ -55,7 +55,7 @@ function act(action) { emit(action); emit('close') }
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ t('filemanager.paste') }}
           </button>
-          <div class="border-t border-[var(--color-border)] my-0.5" />
+          <div class="h-px bg-[var(--color-bg-tertiary)] my-0.5" />
           <button @click="act('duplicate')"
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ t('filemanager.duplicate') }}
@@ -64,7 +64,7 @@ function act(action) { emit(action); emit('close') }
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             {{ t('filemanager.rename') }}
           </button>
-          <div class="border-t border-[var(--color-border)] my-0.5" />
+          <div class="h-px bg-[var(--color-bg-tertiary)] my-0.5" />
           <button @click="act('delete')"
             class="w-full text-left px-3 py-1.5 hover:bg-[var(--color-bg-tertiary)] text-[var(--color-danger)]">
             {{ t('filemanager.delete') }}

@@ -97,9 +97,9 @@ function onSubmit() {
       <div>
         <label class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{{ t('connection.name') }}</label>
         <input v-model="form.name" type="text" placeholder="My Server"
-          class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)]
-            bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]
-            focus:outline-none focus:border-[var(--color-accent)] transition-colors" />
+          class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)]
+            bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]
+            focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-colors" />
         <p v-if="errors.name" class="text-xs text-[var(--color-danger)] mt-0.5">{{ errors.name }}</p>
       </div>
 
@@ -125,9 +125,9 @@ function onSubmit() {
       <div>
         <label class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{{ t('connection.username') }}</label>
         <input v-model="form.username" type="text" placeholder="root"
-          class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)]
-            bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]
-            focus:outline-none focus:border-[var(--color-accent)] transition-colors" />
+          class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)]
+            bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]
+            focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-colors" />
         <p v-if="errors.username" class="text-xs text-[var(--color-danger)] mt-0.5">{{ errors.username }}</p>
       </div>
 
@@ -168,9 +168,9 @@ function onSubmit() {
         <div>
           <label class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{{ t('connection.passphrase') }}</label>
           <input v-model="form.passphrase" type="password" placeholder="Key passphrase"
-            class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)] border border-[var(--color-border)]
-              bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]
-              focus:outline-none focus:border-[var(--color-accent)] transition-colors" />
+            class="w-full px-3 py-1.5 text-sm rounded-[var(--radius-sm)]
+              bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]
+              focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-colors" />
         </div>
       </template>
 
@@ -179,15 +179,14 @@ function onSubmit() {
         <label class="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{{ t('connection.keepalive') }}</label>
         <div class="flex items-center gap-1.5">
           <input v-model.number="form.keepaliveSeconds" type="number" min="0" max="3600" placeholder="0"
-            class="w-16 px-2 py-1 text-xs text-right rounded-lg border border-[var(--color-border)]
-              bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-mono
-              focus:outline-none focus:border-[var(--color-accent)] transition-all" />
+            class="w-16 px-2 py-1 text-xs text-right rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-mono
+              focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-all" />
           <span class="text-[10px] text-[var(--color-text-tertiary)]">s (0 = {{ t('connection.keepaliveOff') }})</span>
         </div>
       </div>
 
       <!-- Auto Reconnect -->
-      <div class="pt-1 border-t border-[var(--color-border)]">
+      <div class="pt-3">
         <label class="flex items-center justify-between cursor-pointer">
           <span class="text-xs font-medium text-[var(--color-text-secondary)]">{{ t('connection.reconnect') }}</span>
           <button type="button" role="switch" :aria-checked="form.reconnectEnabled"
@@ -199,9 +198,8 @@ function onSubmit() {
         <div v-if="form.reconnectEnabled" class="flex items-center gap-1.5 mt-2">
           <span class="text-[10px] text-[var(--color-text-tertiary)]">{{ t('connection.reconnectMax') }}</span>
           <input v-model.number="form.reconnectMaxAttempts" type="number" min="1" max="20"
-            class="w-14 px-2 py-0.5 text-xs text-right rounded border border-[var(--color-border)]
-              bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-mono
-              focus:outline-none focus:border-[var(--color-accent)] transition-all" />
+            class="w-14 px-2 py-0.5 text-xs text-right rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-mono
+              focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] transition-all" />
         </div>
         <p v-else class="text-[10px] text-[var(--color-text-tertiary)] mt-1">{{ t('connection.reconnectOff') }}</p>
       </div>

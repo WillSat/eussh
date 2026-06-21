@@ -43,7 +43,7 @@ async function copyOutput(r) {
 <template>
   <div class="flex-1 flex flex-col min-h-0 overflow-y-auto">
     <!-- Header -->
-    <div class="shrink-0 px-3 pt-3 pb-2 border-b border-[var(--color-border)]">
+    <div class="shrink-0 px-3 pt-3 pb-2">
       <span class="text-[11px] font-bold uppercase tracking-widest text-[var(--color-accent)]">{{ t('batch.title') }}</span>
     </div>
 
@@ -66,7 +66,7 @@ async function copyOutput(r) {
           class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)]/50 cursor-pointer transition-colors group">
           <span class="relative flex items-center justify-center shrink-0">
             <input type="checkbox" :checked="checked.has(srv.id)" @change="checked.has(srv.id) ? checked.delete(srv.id) : checked.add(srv.id)"
-              class="peer w-3.5 h-3.5 rounded appearance-none border border-[var(--color-border)] bg-[var(--color-bg-primary)] checked:bg-[var(--color-accent)] checked:border-[var(--color-accent)] transition-colors cursor-pointer" />
+              class="peer w-3.5 h-3.5 rounded bg-[var(--color-bg-tertiary)] checked:bg-[var(--color-accent)] transition-colors cursor-pointer" />
             <svg class="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
           <span class="text-[12px] text-[var(--color-text-primary)] truncate group-hover:text-[var(--color-accent)] transition-colors">{{ srv.nickname }}</span>
@@ -78,7 +78,7 @@ async function copyOutput(r) {
     <div class="px-3 pb-2.5">
       <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">{{ t('batch.command') }}</span>
       <textarea v-model="cmd" rows="4" :placeholder="t('batch.placeholder')"
-        class="w-full mt-1.5 px-2.5 py-2 text-[12px] font-mono rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] resize-none focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]/20 placeholder:text-[var(--color-text-tertiary)]/50 transition-all" />
+        class="w-full mt-1.5 px-2.5 py-2 text-[12px] font-mono rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] resize-none focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]/20 placeholder:text-[var(--color-text-tertiary)]/50 transition-all" />
       <div class="flex items-center justify-between mt-1.5">
         <span class="text-[10px] text-[var(--color-text-tertiary)]/70">{{ t('batch.hint') }}</span>
         <button @click="run" :disabled="running || checked.size === 0 || !cmd.trim()"
@@ -98,12 +98,12 @@ async function copyOutput(r) {
       </span>
       <div class="flex-1 overflow-y-auto space-y-1.5">
         <div v-for="r in results" :key="r.id"
-          :class="['rounded-lg overflow-hidden border',
+          :class="['rounded-lg overflow-hidden shadow-[var(--shadow-sm)]',
             r.error
-              ? 'border-[color-mix(in_srgb,#FF3B30_25%,transparent)] bg-[color-mix(in_srgb,#FF3B30_4%,transparent)]'
-              : 'border-l-[var(--color-accent)]/40 border-t-[var(--color-border)] border-r-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--color-bg-primary)]']">
+              ? 'bg-[color-mix(in_srgb,#FF3B30_4%,transparent)] ring-1 ring-[#FF3B30]/25'
+              : 'bg-[var(--color-bg-primary)]']">
           <!-- Card header -->
-          <div class="flex items-center justify-between px-2.5 py-1.5 border-b border-inherit">
+          <div class="flex items-center justify-between px-2.5 py-1.5">
             <div class="flex items-center gap-1.5 min-w-0">
               <span :class="['w-1.5 h-1.5 rounded-full shrink-0', r.error ? 'bg-[#FF3B30]' : 'bg-[#34C759]']" />
               <span :class="['text-[12px] font-semibold truncate', r.error ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-primary)]']">{{ r.nickname }}</span>

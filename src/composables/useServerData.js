@@ -60,6 +60,10 @@ export function useServerData(sessionIdRef) {
   const allIps      = ref([])          // string[] — IPv4 + IPv6
   const geoLocation = ref(null)
 
+  const portList    = ref([])          // { port, address, pid, process }[] — fetched manually
+  const portLoading = ref(false)
+  const portError   = ref(null)
+
   const loading       = ref(false)
   const staticLoading = ref(false)
   const firstLoadDone = ref(false)
@@ -296,6 +300,69 @@ export function useServerData(sessionIdRef) {
     fetchGeoLocation()
   }
 
+  // ── fetchPorts ────────────────────────────────────────────────────
+  function parseSsOutput(raw) {
+    if (!raw) return []
+    const lines = raw.split('\n').filter(Boolean)
+    const result = []
+    // Detect if we got process info (ss -tlnp / netstat -tlnp) or bare ports (ss -tln / netstat -an)
+    const hasProcess = /\busers:\(/.test(raw)
+    for (const line of lines) {
+      if (/^(State|Proto)\s/i.test(line)) continue
+      // Extract local address:port before the peer address (*:* or equivalent)
+      const addrMatch = line.match(/(\S+):(\d{1,5})\s+\S+:\*|(\S+):(\d{1,5})\s+\S+:\d+/)
+      if (!addrMatch) continue
+      const address = addrMatch[1] || addrMatch[3]
+      const port = parseInt(addrMatch[2] || addrMatch[4], 10)
+      if (!port || port < 0 || port > 65535) continue
+
+      let pid = null
+      let process = null
+      if (hasProcess) {
+        const procMatch = line.match(/users:\(\(\"(.+?)\",pid=(\d+)/)
+        if (procMatch) { process = procMatch[1]; pid = parseInt(procMatch[2], 10) }
+      }
+      // Clean up IPv6 bracket notation
+      const displayAddr = address.replace(/^\[|\]$/g, '')
+      result.push({ port, address: displayAddr, pid, process })
+    }
+    return result
+  }
+
+  async function fetchPorts() {
+    if (disposed || portLoading.value) return
+    const sid = sessionIdRef?.value
+    if (!sid) return
+    portLoading.value = true
+    portError.value = null
+    const sidTag = sid.slice(0, 8)
+    try {
+      // Fallback chain: ss -tlnp (Linux root) → ss -tln (Linux non-root) → netstat -tlnp → netstat -an | grep LISTEN
+      let raw = await safeExec(sid, "ss -tlnp 2>/dev/null || ss -tln 2>/dev/null || netstat -tlnp 2>/dev/null || netstat -an 2>/dev/null | grep LISTEN", 8000)
+      // If netstat -an fallback was used, we may have only the LISTEN lines
+      if (raw) {
+        portList.value = parseSsOutput(raw)
+        log.info(`[${sidTag}] ports fetched: ${portList.value.length} entries`)
+      } else {
+        portList.value = []
+        portError.value = 'No output from port command'
+      }
+    } catch (e) {
+      portList.value = []
+      portError.value = e?.message || String(e)
+      log.warn(`[${sidTag}] ports fetch failed: ${portError.value}`)
+    } finally {
+      portLoading.value = false
+    }
+  }
+
+  // ── refreshStatic ─────────────────────────────────────────────────
+  function refreshStatic() {
+    staticCache = null
+    fetchStatic()
+    fetchPorts()
+  }
+
   // ── Polling ─────────────────────────────────────────────────────
   function startPolling() {
     if (disposed) return
@@ -325,6 +392,8 @@ export function useServerData(sessionIdRef) {
     swapUsedMib, swapTotalMib, swapPercent,
     diskTotal, diskUsed, diskPercent,
     allIps, geoLocation,
+    portList, portLoading, portError, fetchPorts,
     staticLoading, firstLoadDone, dataStale,
+    refreshStatic,
   }
 }

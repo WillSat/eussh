@@ -122,11 +122,11 @@ const dotClass = computed(() => {
 })
 
 function getContainerClass() {
-  const base = 'flex items-center justify-between h-7 px-3 select-none border-t text-xs'
+  const base = 'flex items-center justify-between h-7 px-3 select-none text-xs shadow-[0_-1px_3px_rgba(0,0,0,0.04)]'
   if (isAccent.value) {
-    return `${base} bg-[var(--color-accent)] text-white border-[var(--color-accent-hover)]`
+    return `${base} bg-[var(--color-accent)] text-white`
   }
-  return `${base} bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)]`
+  return `${base} bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]`
 }
 
 function getDimText() {

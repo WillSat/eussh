@@ -14,10 +14,9 @@ const levelColors = {
 <template>
   <div
     v-if="logState.showPanel"
-    class="fixed bottom-0 left-0 right-0 z-[100] bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]
-      shadow-[var(--shadow-lg)] max-h-64 overflow-y-auto font-mono text-[11px]"
+    class="fixed bottom-0 left-0 right-0 z-[100] bg-[var(--color-bg-primary)] shadow-[0_-1px_3px_rgba(0,0,0,0.06)] shadow-[var(--shadow-lg)] max-h-64 overflow-y-auto font-mono text-[11px]"
   >
-    <div class="flex items-center justify-between px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] sticky top-0">
+    <div class="flex items-center justify-between px-3 py-1.5 bg-[var(--color-bg-tertiary)] sticky top-0">
       <span class="text-xs font-semibold text-[var(--color-text-primary)]">Debug Log</span>
       <button
         @click="logState.showPanel = false"

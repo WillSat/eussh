@@ -11,7 +11,7 @@ const items = computed(() => [
 ])
 </script>
 <template>
-  <div class="w-11 shrink-0 flex flex-col items-center gap-0.5 pt-2 pb-3 select-none bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)]">
+   <div class="w-11 shrink-0 flex flex-col items-center gap-0.5 pt-2 pb-3 select-none bg-[var(--color-bg-sidebar)] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
     <button v-for="item in items" :key="item.id" @click="emit('select', item.id)" :title="item.label"
       :class="['w-8 h-8 flex items-center justify-center rounded-lg transition-all',
         active === item.id ? 'text-[var(--color-accent)] bg-[var(--color-accent)]/10' : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]']">

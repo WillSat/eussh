@@ -12,6 +12,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useServerData } from '@/composables/useServerData'
 import { useI18n } from '@/composables/useI18n'
 import { useLogger } from '@/composables/useLogger'
+import RoseSpinner from '@/components/common/RoseSpinner.vue'
 
 const props = defineProps({
   serverId:  { type: String, required: true },
@@ -34,7 +35,9 @@ const {
   swapUsedMib, swapTotalMib, swapPercent,
   diskTotal, diskUsed, diskPercent,
   allIps, geoLocation,
+  portList, portLoading, portError, fetchPorts,
   staticLoading, firstLoadDone, dataStale,
+  refreshStatic,
 } = data
 
 // ── Accent / Theme ─────────────────────────────────────────────────
@@ -43,13 +46,12 @@ const ACCENT = computed(() => accentColor.value)
 
 const textPri = ref('#1d1d1f'); const textSec = ref('#86868b')
 const textTer = ref('#aeaeb2'); const bgSec = ref('#f5f5f7')
-const bgTer = ref('#e8e8ed'); const borderClr = ref('#d0d0d5')
-const trackClr = ref('#e8e8ed')
+const bgTer = ref('#e8e8ed'); const trackClr = ref('#e8e8ed')
 
 function resolveTheme() {
   const d = document.documentElement.classList.contains('dark')
-  if (d) { textPri.value='#f5f5f7'; textSec.value='#98989d'; textTer.value='#6e6e73'; bgSec.value='#252526'; bgTer.value='#2d2d30'; borderClr.value='#3d3d40'; trackClr.value='#3d3d40' }
-  else   { textPri.value='#1d1d1f'; textSec.value='#86868b'; textTer.value='#aeaeb2'; bgSec.value='#f5f5f7'; bgTer.value='#e8e8ed'; borderClr.value='#d0d0d5'; trackClr.value='#e8e8ed' }
+  if (d) { textPri.value='#f5f5f7'; textSec.value='#98989d'; textTer.value='#6e6e73'; bgSec.value='#252526'; bgTer.value='#2d2d30'; trackClr.value='#3d3d40' }
+  else   { textPri.value='#1d1d1f'; textSec.value='#86868b'; textTer.value='#aeaeb2'; bgSec.value='#f5f5f7'; bgTer.value='#e8e8ed'; trackClr.value='#e8e8ed' }
 }
 
 // 閳光偓閳光偓 Copy IP to clipboard 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
@@ -87,7 +89,7 @@ function updateGauges() {
 
 function mapOption() {
   const g = geoLocation.value
-  return { backgroundColor: 'transparent', geo: { map: 'world', roam: false, zoom: 1.1, center: [0,20], silent: true, itemStyle: { areaColor: bgTer.value, borderColor: borderClr.value, borderWidth: 0.5 }, emphasis: { disabled: true } }, series: g ? [{ type: 'effectScatter', coordinateSystem: 'geo', data: [[g.lng, g.lat, 1]], symbolSize: 8, showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3.5, period: 4.5 }, itemStyle: { color: ACCENT.value }, zlevel: 1 }] : [] }
+  return { backgroundColor: 'transparent', geo: { map: 'world', roam: false, zoom: 1.1, center: [0,20], silent: true, itemStyle: { areaColor: bgTer.value, borderColor: bgTer.value, borderWidth: 0.5 }, emphasis: { disabled: true } }, series: g ? [{ type: 'effectScatter', coordinateSystem: 'geo', data: [[g.lng, g.lat, 1]], symbolSize: 8, showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3.5, period: 4.5 }, itemStyle: { color: ACCENT.value }, zlevel: 1 }] : [] }
 }
 function updateMap() {
   if (!mapChart) return
@@ -126,25 +128,10 @@ const hasIps    = computed(() => allIps.value.length > 0)
   <div class="h-full overflow-y-auto bg-[var(--color-bg-primary)]">
     <div class="max-w-6xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-5">
 
-      <!-- 閳烘劏鏅查埡?SKELETON 閳烘劏鏅查埡?-->
+      <!-- ═══ SKELETON / LOADING ═══ -->
       <Transition name="skel-fade">
-        <div v-if="!firstLoadDone" class="space-y-5">
-          <div class="flex items-start justify-between gap-3">
-            <div class="space-y-2 flex-1">
-              <div class="skeleton-block w-48 h-6 rounded" />
-              <div class="skeleton-block w-72 h-3.5 rounded" />
-            </div>
-            <div class="flex gap-2">
-              <div class="skeleton-block w-24 h-8 rounded-lg" />
-              <div class="skeleton-block w-20 h-8 rounded-lg" />
-            </div>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div v-for="i in 4" :key="i" class="skeleton-card rounded-xl p-4 flex flex-col items-center gap-3">
-              <div class="skeleton-block w-20 h-20 rounded-full" />
-              <div class="skeleton-block w-12 h-3 rounded" />
-            </div>
-          </div>
+        <div v-if="!firstLoadDone" class="flex items-center justify-center" style="min-height: 320px">
+          <RoseSpinner :rose-scale="2.5" :text="t('overview.loading')" />
         </div>
       </Transition>
 
@@ -160,7 +147,6 @@ const hasIps    = computed(() => allIps.value.length > 0)
             <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
               <span v-if="osInfo" class="text-xs" :style="{ color: textSec }">{{ osInfo }}</span>
               <span v-if="kernelVer" class="text-xs font-mono" :style="{ color: textTer }">{{ kernelVer }}</span>
-              <span v-if="staticLoading" class="text-[10px] animate-pulse" :style="{ color: textTer }">{{ t('overview.loading') }}</span>
             <span v-if="dataStale && !staticLoading" class="text-[10px] flex items-center gap-1" style="color: #e6a817">
               <span class="inline-block w-1.5 h-1.5 rounded-full" style="background: #e6a817"></span>
               {{ t('overview.dataStale') }}
@@ -175,6 +161,10 @@ const hasIps    = computed(() => allIps.value.length > 0)
             <button @click="serverStore.addFileManagerTab(props.serverId)" class="btn-secondary">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
               {{ t('overview.fileManager') }}
+            </button>
+            <button @click="refreshStatic" class="btn-secondary" :disabled="staticLoading">
+              <svg class="w-3 h-3" :class="{ 'animate-spin': staticLoading }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
+              {{ t('overview.refreshStatic') }}
             </button>
           </div>
         </div>
@@ -219,9 +209,9 @@ const hasIps    = computed(() => allIps.value.length > 0)
         <!-- 閳光偓閳光偓 INFO CARDS + WORLD MAP 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <!-- Left: info cards (2�?) -->
-          <div class="grid grid-cols-2 gap-3 content-start">
+          <div class="grid grid-cols-2 gap-3 content-start relative">
             <!-- Uptime -->
-            <div class="info-card" :style="{ background: bgSec, borderColor: borderClr }">
+            <div class="info-card shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
               <div class="info-card-row">
                 <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: textTer }"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span class="info-card-label" :style="{ color: textTer }">{{ t('overview.uptime') }}</span>
@@ -229,7 +219,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
               <p class="info-card-value" :style="{ color: uptime ? textPri : textTer }">{{ uptime || '--' }}</p>
             </div>
             <!-- Timezone -->
-            <div class="info-card" :style="{ background: bgSec, borderColor: borderClr }">
+            <div class="info-card shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
               <div class="info-card-row">
                 <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: textTer }"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10"/><path d="M12 2a15.3 15.3 0 00-4 10 15.3 15.3 0 004 10"/></svg>
                 <span class="info-card-label" :style="{ color: textTer }">{{ t('overview.timezone') }}</span>
@@ -237,7 +227,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
               <p class="info-card-value truncate" :style="{ color: timezone ? textPri : textTer }" :title="timezone">{{ timezone || '--' }}</p>
             </div>
             <!-- Latency -->
-            <div class="info-card" :style="{ background: bgSec, borderColor: borderClr }">
+            <div class="info-card shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
               <div class="info-card-row">
                 <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: textTer }"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                 <span class="info-card-label" :style="{ color: textTer }">{{ t('overview.latency') }}</span>
@@ -247,7 +237,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
               </p>
             </div>
             <!-- Host + All IPs -->
-            <div class="info-card row-span-2 flex flex-col" :style="{ background: bgSec, borderColor: borderClr }">
+            <div class="info-card row-span-2 flex flex-col shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
               <div class="info-card-row">
                 <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: textTer }"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                 <span class="info-card-label" :style="{ color: textTer }">{{ t('overview.host') }}</span>
@@ -272,10 +262,50 @@ const hasIps    = computed(() => allIps.value.length > 0)
                 <span class="text-xs" :style="{ color: textTer }">--</span>
               </div>
             </div>
+
+            <!-- Port Usage -->
+            <div v-if="firstLoadDone" class="col-span-2 rounded-xl p-4 relative shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
+              <span class="block text-xs font-semibold uppercase tracking-wide mb-3" :style="{ color: textSec }">{{ t('overview.ports') }}</span>
+              <div v-if="portLoading && portList.length === 0" class="flex items-center justify-center py-8">
+                <RoseSpinner :rose-scale="1.6" />
+              </div>
+              <div v-else-if="!portLoading && portList.length === 0" class="text-center py-8">
+                <span class="text-xs" :style="{ color: portError ? 'var(--color-danger)' : textTer }">{{ portError || t('overview.portNoData') }}</span>
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead>
+                    <tr class="bg-[var(--color-bg-tertiary)]">
+                      <th class="text-left py-1.5 pr-3 font-medium w-16" :style="{ color: textTer }">{{ t('overview.port') }}</th>
+                      <th class="text-left py-1.5 pr-3 font-medium" :style="{ color: textTer }">{{ t('overview.portAddress') }}</th>
+                      <th class="text-left py-1.5 pr-3 font-medium w-16" :style="{ color: textTer }">{{ t('overview.portPid') }}</th>
+                      <th class="text-left py-1.5 font-medium" :style="{ color: textTer }">{{ t('overview.portProcess') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(p, i) in portList" :key="i" class="hover:bg-[var(--color-bg-tertiary)]/50 transition-colors">
+                      <td class="py-1.5 pr-3 font-mono tabular-nums" :style="{ color: ACCENT }">{{ p.port }}</td>
+                      <td class="py-1.5 pr-3 font-mono" :style="{ color: textSec }">{{ p.address }}</td>
+                      <td class="py-1.5 pr-3 font-mono tabular-nums" :style="{ color: p.pid ? textPri : textTer }">{{ p.pid || '--' }}</td>
+                      <td class="py-1.5 font-mono truncate max-w-[240px]" :style="{ color: p.process ? textPri : textTer }">{{ p.process || '--' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- Frosted overlay for port refresh -->
+              <div v-if="portLoading && portList.length > 0" class="absolute inset-0 z-10 flex items-center justify-center rounded-xl frosted-overlay">
+                <RoseSpinner :rose-scale="2.0" :text="t('overview.loading')" />
+              </div>
+            </div>
+
+            <!-- Frosted overlay while static data refreshes -->
+            <div v-if="staticLoading" class="absolute inset-0 z-10 flex items-center justify-center frosted-overlay">
+              <RoseSpinner :rose-scale="2.0" :text="t('overview.loading')" />
+            </div>
           </div>
 
           <!-- Right: world map -->
-          <div class="rounded-xl border flex flex-col min-h-[300px]" :style="{ borderColor: borderClr, background: bgSec }">
+          <div class="rounded-xl flex flex-col min-h-[300px] relative shadow-[var(--shadow-sm)]" :style="{ background: bgSec }">
             <template v-if="geoLocation">
               <div class="flex items-center gap-2 px-4 pt-3">
                 <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" :style="{ color: ACCENT }"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -290,6 +320,10 @@ const hasIps    = computed(() => allIps.value.length > 0)
               </div>
             </template>
             <div ref="mapEl" class="flex-1 w-full min-h-[240px]" />
+            <!-- Frosted overlay while static data refreshes -->
+            <div v-if="staticLoading" class="absolute inset-0 z-10 flex items-center justify-center frosted-overlay">
+              <RoseSpinner :rose-scale="2.0" :text="t('overview.loading')" />
+            </div>
           </div>
         </div>
 
@@ -301,7 +335,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
 <style scoped>
 /* 閳光偓閳光偓 Skeleton 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光�?*/
 .skeleton-block { background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-bg-tertiary) 50%, var(--color-bg-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
-.skeleton-card  { background: var(--color-bg-secondary); border: 1px solid var(--color-border); }
+.skeleton-card  { background: var(--color-bg-secondary); box-shadow: var(--shadow-sm); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .skel-fade-enter-active { transition: opacity 200ms ease; }
 .skel-fade-leave-active { transition: opacity 300ms ease; }
@@ -310,12 +344,22 @@ const hasIps    = computed(() => allIps.value.length > 0)
 /* 閳光偓閳光偓 Buttons 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
 .btn-primary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.5rem; color: #fff; background: var(--color-accent); transition: filter 150ms; }
 .btn-primary:hover { filter: brightness(1.1); }
-.btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.5rem; border: 1px solid var(--color-border); color: var(--color-text-primary); background: var(--color-bg-secondary); transition: background 150ms; }
-.btn-secondary:hover { background: var(--color-bg-tertiary); }
+.btn-secondary { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.5rem; color: var(--color-text-primary); background: var(--color-bg-tertiary); transition: filter 150ms; }
+.btn-secondary:hover { filter: brightness(1.05); }
+.btn-refresh { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.375rem; color: var(--color-text-secondary); background: var(--color-bg-tertiary); transition: all 150ms; }
+.btn-refresh:hover:not(:disabled) { color: var(--color-text-primary); filter: brightness(1.05); }
+.btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ═══ Frosted Glass Overlay ═══ */
+.frosted-overlay {
+  background: color-mix(in srgb, var(--color-bg-primary) 55%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
 
 /* 閳光偓閳光偓 Gauge 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
-.gauge-card { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; padding: 1rem 0.75rem; border-radius: 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); transition: border-color 200ms; }
-.gauge-card:hover { border-color: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+.gauge-card { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; padding: 1rem 0.75rem; border-radius: 0.75rem; box-shadow: var(--shadow-sm); background: var(--color-bg-secondary); transition: box-shadow 200ms; }
+.gauge-card:hover { box-shadow: var(--shadow-md); }
 .gauge-chart-wrap { display: grid; place-items: center; width: 100px; height: 100px; position: relative; }
 .gauge-chart { position: absolute; inset: 0; width: 100%; height: 100%; }
 .gauge-center { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; transform: translateY(2px); }
@@ -325,7 +369,7 @@ const hasIps    = computed(() => allIps.value.length > 0)
 .gauge-sub   { font-size: 0.6rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
 /* 閳光偓閳光偓 Info card 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓 */
-.info-card { padding: 0.75rem; border-radius: 0.75rem; border: 1px solid; }
+.info-card { padding: 0.75rem; border-radius: 0.75rem; }
 .info-card-row { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.375rem; }
 .info-card-icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 .info-card-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }

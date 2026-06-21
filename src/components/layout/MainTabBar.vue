@@ -50,7 +50,7 @@ function toggleDropdown(e) {
   <div
     v-if="server"
     class="flex items-center h-9 shrink-0 select-none
-      bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]"
+      bg-[var(--color-bg-secondary)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
   >
     <div class="flex items-center h-full overflow-x-auto">
       <button
@@ -58,7 +58,7 @@ function toggleDropdown(e) {
         :key="tab.id"
         @click="selectTab(tab.id)"
         :class="[
-          'group flex items-center gap-2 h-full px-3 text-[13px] font-medium whitespace-nowrap border-r border-[var(--color-border)] transition-colors',
+          'group flex items-center gap-2 h-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
           tab.id === activeTabId
             ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]'
             : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]',
@@ -84,7 +84,7 @@ function toggleDropdown(e) {
       <Teleport to="body">
         <div v-if="dropdownVisible" class="fixed inset-0 z-[55]" @click="dropdownVisible = false" @contextmenu.prevent="dropdownVisible = false">
           <div
-            class="fixed bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-[var(--radius-sm)] shadow-[var(--shadow-md)] py-1 min-w-[160px] text-[13px] select-none"
+            class="fixed bg-[var(--color-bg-primary)] rounded-[var(--radius-sm)] shadow-[var(--shadow-lg)] py-1 min-w-[160px] text-[13px] select-none"
             :style="{ left: Math.min(dropdownX, winW - 170) + 'px', top: dropdownY + 'px' }"
           >
             <button @click="addTerminal"

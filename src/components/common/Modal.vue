@@ -51,9 +51,9 @@ watch(() => props.visible, (v) => {
 
       <!-- Panel -->
       <div class="relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)]
-        shadow-[var(--shadow-lg)] border border-[var(--color-border)]
+        shadow-[var(--shadow-lg)]
         w-full max-w-md mx-4 overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
+        <div class="flex items-center justify-between px-5 py-4 bg-[var(--color-bg-secondary)]">
           <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ title }}</h2>
           <button
             @click="emit('close')"

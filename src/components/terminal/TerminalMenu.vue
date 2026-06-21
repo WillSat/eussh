@@ -26,7 +26,7 @@ function onPaste() {
   <Teleport to="body">
     <div v-if="visible" class="fixed inset-0 z-[60]" @click="emit('close')" @contextmenu.prevent="emit('close')">
       <div
-        class="fixed rounded-[var(--radius-md)] bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
+        class="fixed rounded-[var(--radius-md)] bg-[var(--color-bg-secondary)]
           shadow-[var(--shadow-lg)] py-1 min-w-[120px] z-[61]"
         :style="{ left: x + 'px', top: y + 'px' }"
       >
