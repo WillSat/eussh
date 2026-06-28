@@ -55,8 +55,10 @@ watch(title, (t) => { try { win.setTitle(t) } catch {} }, { immediate: true })
 async function handleActivitySelect(id) {
   if (id === 'terminal') {
     showLocalTerminal.value = true
+    showSettingsOverlay.value = false
     return
   }
+  showLocalTerminal.value = false
   if (id === 'settings') {
     showSettingsOverlay.value = true
   } else {
