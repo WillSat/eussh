@@ -149,12 +149,12 @@ with open('src-tauri/tauri.conf.json', 'w') as f:
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           echo "Releasing tag: $TAG"
 
-          # Create release (ignore error if already exists)
+          # Create release (edit to undraft if already exists from build.yml)
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "See [CHANGELOG](https://github.com/WillSat/eussh#%EF%B8%8F-%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97) for details." \
             --draft=false \
-            || true
+            2>/dev/null || gh release edit "$TAG" --draft=false
 
           set -- ${{ matrix.artifact_glob }}
           for pattern; do
