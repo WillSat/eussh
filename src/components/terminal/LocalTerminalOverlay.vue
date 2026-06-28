@@ -1,14 +1,17 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useXterm } from '@/composables/useXterm'
 import { invoke } from '@/utils/ipc'
 import { useI18n } from '@/composables/useI18n'
 
 const { t } = useI18n()
+const props = defineProps({
+  visible: { type: Boolean, default: true },
+})
 const emit = defineEmits(['close'])
 
 const sessionIdRef = ref('')
-const { term, containerRef, init, destroy } = useXterm(sessionIdRef, {
+const { term, containerRef, init, destroy, refitAndFocus } = useXterm(sessionIdRef, {
   writeCmd: 'local_terminal_write',
   resizeCmd: 'local_terminal_resize',
   dataEvent: 'local-terminal-data',
@@ -24,6 +27,10 @@ async function handleClose() {
   destroy()
   emit('close')
 }
+
+watch(() => props.visible, async (v) => {
+  if (v) await refitAndFocus()
+})
 
 onMounted(async () => {
   document.addEventListener('keydown', onKey)
@@ -46,7 +53,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <div class="absolute inset-0 z-50 bg-[var(--color-bg-primary)] flex flex-col">
+  <div v-show="visible" class="absolute inset-0 z-50 bg-[var(--color-bg-primary)] flex flex-col">
     <div class="shrink-0 flex items-center justify-between px-4 h-10 bg-[var(--color-bg-secondary)] select-none">
       <div class="flex items-center gap-2">
         <span class="text-[12px] font-semibold text-[var(--color-text-primary)]">{{ t('activity.terminal') }}</span>

@@ -39,6 +39,7 @@ const { state: toast, close: closeToast, error: showError } = useToast()
 const activeView = ref('servers')
 const showSettingsOverlay = ref(false)
 const showLocalTerminal = ref(false)
+const terminalAlive = ref(false)
 const hostKeyDialog = ref(null)
 
 log.info('setup start')
@@ -55,6 +56,7 @@ watch(title, (t) => { try { win.setTitle(t) } catch {} }, { immediate: true })
 async function handleActivitySelect(id) {
   if (id === 'terminal') {
     showLocalTerminal.value = true
+    terminalAlive.value = true
     showSettingsOverlay.value = false
     return
   }
@@ -65,6 +67,11 @@ async function handleActivitySelect(id) {
     showSettingsOverlay.value = false
     activeView.value = id
   }
+}
+
+function handleLocalTerminalClose() {
+  showLocalTerminal.value = false
+  terminalAlive.value = false
 }
 
 function getOverviewSessionId(srv) {
@@ -296,7 +303,7 @@ onMounted(async () => {
           </div>
         </div>
         <SettingsOverlay v-if="showSettingsOverlay" @close="showSettingsOverlay = false" />
-        <LocalTerminalOverlay v-if="showLocalTerminal" @close="showLocalTerminal = false" />
+        <LocalTerminalOverlay v-if="terminalAlive" :visible="showLocalTerminal" @close="handleLocalTerminalClose" />
       </div>
     </div>
     <StatusBar />
