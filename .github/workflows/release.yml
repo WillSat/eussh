@@ -101,15 +101,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           # Override tauri.conf.json signing identity with Developer ID
-          python3 -c "
-import json, os
-with open('src-tauri/tauri.conf.json') as f:
-    cfg = json.load(f)
-cfg['bundle']['macOS']['signingIdentity'] = os.environ['APPLE_SIGNING_IDENTITY']
-with open('src-tauri/tauri.conf.json', 'w') as f:
-    json.dump(cfg, f, indent=2)
-    f.write(chr(10))
-"
+          python3 -c 'import json,os;c=json.loads(open("src-tauri/tauri.conf.json").read());c["bundle"]["macOS"]["signingIdentity"]=os.environ["APPLE_SIGNING_IDENTITY"];open("src-tauri/tauri.conf.json","w").write(json.dumps(c,indent=2)+"\n")'
           echo "Updated signing identity to: $APPLE_SIGNING_IDENTITY"
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
 
