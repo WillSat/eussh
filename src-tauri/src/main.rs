@@ -5,14 +5,16 @@ mod commands;
 mod ssh;
 mod storage;
 mod models;
+mod terminal;
 
 use state::AppState;
-use commands::{config, connection, file, open};
+use commands::{config, connection, file, local, open};
 
 fn main() {
     let app_state = AppState {
         config_store: storage::config_store::ConfigStore::new(),
         ssh_manager: std::sync::Arc::new(ssh::manager::SshManager::new()),
+        local_terminal_manager: std::sync::Arc::new(terminal::manager::LocalTerminalManager::new()),
     };
 
     tauri::Builder::default()
@@ -45,6 +47,10 @@ fn main() {
             file::file_upload_path,
             file::file_chmod,
             open::open_url,
+            local::local_terminal_spawn,
+            local::local_terminal_write,
+            local::local_terminal_resize,
+            local::local_terminal_kill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

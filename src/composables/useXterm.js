@@ -14,7 +14,12 @@ function afterLayout() {
   return new Promise(resolve => requestAnimationFrame(resolve))
 }
 
-export function useXterm(sessionIdRef) {
+export function useXterm(sessionIdRef, options = {}) {
+  const {
+    writeCmd = 'terminal_write',
+    resizeCmd = 'terminal_resize',
+    dataEvent = 'terminal-data',
+  } = options
   const term = ref(null)
   const fitAddon = new FitAddon()
   const containerRef = ref(null)
@@ -59,11 +64,11 @@ export function useXterm(sessionIdRef) {
       if (!sid) return
       try {
         const encoder = new TextEncoder()
-        await invoke('terminal_write', { sessionId: sid, data: Array.from(encoder.encode(data)) })
+        await invoke(writeCmd, { sessionId: sid, data: Array.from(encoder.encode(data)) })
       } catch {}
     })
 
-    unlisteners.push(await listen('terminal-data', (event) => {
+    unlisteners.push(await listen(dataEvent, (event) => {
       if (event.payload.session_id === sessionId.value) {
         const decoder = new TextDecoder()
         const text = decoder.decode(new Uint8Array(event.payload.data))
@@ -74,7 +79,7 @@ export function useXterm(sessionIdRef) {
     resizeObserver = new ResizeObserver(() => {
       fitAddon.fit()
       if (term.value && sessionId.value && term.value.cols > 0 && term.value.rows > 0) {
-        invoke('terminal_resize', {
+        invoke(resizeCmd, {
           sessionId: sessionId.value,
           cols: term.value.cols,
           rows: term.value.rows,

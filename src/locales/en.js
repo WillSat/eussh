@@ -2,7 +2,7 @@ export default {
   app: { title: 'Eussh' },
   titlebar: { debug: 'Debug Log' },
   tabbar: { newTerminal: 'New Terminal', newFileManager: 'File Manager' },
-  activity: { servers: 'Servers', batch: 'Batch Execute', settings: 'Settings' },
+  activity: { servers: 'Servers', batch: 'Batch Execute', settings: 'Settings', terminal: 'Local Terminal' },
   sidebar: { connections: 'Connections', noConnections: 'No saved connections', addHint: 'Click + to add your first server', addServer: 'Add Server', disconnect: 'Disconnect', edit: 'Edit' },
   status: { noServer: 'No server selected', connecting: 'Connecting...', error: 'Connection error', disconnected: 'Disconnected', connected: 'connected', latency: '{ms}ms', uploaded: '{name} uploaded', downloaded: '{name} downloaded' },
   terminal: { copy: 'Copy', paste: 'Paste' },

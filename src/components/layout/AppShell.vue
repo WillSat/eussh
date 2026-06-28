@@ -10,6 +10,7 @@ import DebugPanel from './DebugPanel.vue'
 import HostKeyDialog from '../connection/HostKeyDialog.vue'
 import VersionCheck from './VersionCheck.vue'
 import SettingsOverlay from './sidebar/SettingsView.vue'
+import LocalTerminalOverlay from '@/components/terminal/LocalTerminalOverlay.vue'
 import RoseSpinner from '@/components/common/RoseSpinner.vue'
 
 // Heavy components loaded on demand to reduce initial bundle size
@@ -37,6 +38,7 @@ const { state: toast, close: closeToast, error: showError } = useToast()
 
 const activeView = ref('servers')
 const showSettingsOverlay = ref(false)
+const showLocalTerminal = ref(false)
 const hostKeyDialog = ref(null)
 
 log.info('setup start')
@@ -50,7 +52,11 @@ const title = computed(() => {
 
 watch(title, (t) => { try { win.setTitle(t) } catch {} }, { immediate: true })
 
-function handleActivitySelect(id) {
+async function handleActivitySelect(id) {
+  if (id === 'terminal') {
+    showLocalTerminal.value = true
+    return
+  }
   if (id === 'settings') {
     showSettingsOverlay.value = true
   } else {
@@ -177,7 +183,7 @@ onMounted(async () => {
 <template>
     <div class="app-shell h-screen flex flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
     <div class="flex flex-1 overflow-hidden min-h-0">
-      <ActivityBar :active="showSettingsOverlay ? 'settings' : activeView" @select="handleActivitySelect" />
+      <ActivityBar :active="showLocalTerminal ? 'terminal' : showSettingsOverlay ? 'settings' : activeView" @select="handleActivitySelect" />
       <div class="flex flex-1 overflow-hidden min-h-0 relative">
         <Sidebar :view="activeView" @navigate="e => activeView = e.view" />
         <div class="flex flex-col flex-1 overflow-hidden min-w-0">
@@ -288,6 +294,7 @@ onMounted(async () => {
           </div>
         </div>
         <SettingsOverlay v-if="showSettingsOverlay" @close="showSettingsOverlay = false" />
+        <LocalTerminalOverlay v-if="showLocalTerminal" @close="showLocalTerminal = false" />
       </div>
     </div>
     <StatusBar />

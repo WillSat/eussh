@@ -2,7 +2,7 @@ export default {
   app: { title: 'Eussh' },
   titlebar: { debug: '调试日志' },
   tabbar: { newTerminal: '新建终端', newFileManager: '文件管理' },
-  activity: { servers: '服务器', batch: '批量执行', settings: '设置' },
+  activity: { servers: '服务器', batch: '批量执行', settings: '设置', terminal: '本地终端' },
   sidebar: { connections: '连接', noConnections: '暂无保存的连接', addHint: '点击 + 添加第一个服务器', addServer: '添加服务器', disconnect: '断开连接', edit: '编辑' },
   status: { noServer: '未选择服务器', connecting: '连接中...', error: '连接错误', disconnected: '已断开', connected: '已连接', latency: '{ms}ms', uploaded: '↑ {name} 上传成功', downloaded: '↓ {name} 已下载' },
   terminal: { copy: '复制', paste: '粘贴' },
